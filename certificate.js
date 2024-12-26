@@ -36,7 +36,7 @@ function writeExcel(data, outputFilePath) {
     const globalExcelData = readExcel(filePath); // 전역적으로 관리될 엑셀 데이터
     console.log("입력 데이터:", globalExcelData);
 
-    const delayTime = 500;
+    const delayTime = 3000;
 
     // 데이터 행별로 처리
     for (const item of globalExcelData) {
