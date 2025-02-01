@@ -51,9 +51,9 @@ function writeExcel(data, outputFilePath) {
             //     // 대한상공회의소 진위 조회
             //     await daehanLoginAndVerify(item, delayTime);
             // } 
-            // else if (institution === "국사편찬위원회") {
-            //     await hanguksaVerify(item, delayTime);
-            // } 
+            else if (institution === "국사편찬위원회") {
+                await hanguksaVerify(item, delayTime);
+            } 
 
             // else if(institution ==='한국생산성본부'){
             //     await kpcLicenseVerify(item, delayTime);
