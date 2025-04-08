@@ -29,7 +29,7 @@ function writeExcel(data, outputFilePath) {
 
 // 실행
 (async () => {
-    const filePath = "./자격증.xlsx"; // 입력 엑셀 파일 경로
+    const filePath = "./data/한국생산성본부 진위조회 요청.xlsx"; // 입력 엑셀 파일 경로
     const outputFilePath = "./results/result.xlsx"; // 결과를 저장할 엑셀 파일 경로
 
     // 데이터 읽기
@@ -47,20 +47,20 @@ function writeExcel(data, outputFilePath) {
                 // 대한상공회의소 진위 조회
                 await semuVerify(item, delayTime);
             }
-            // else if (institution === "대한상공회의소") {
-            //     // 대한상공회의소 진위 조회
-            //     await daehanLoginAndVerify(item, delayTime);
-            // } 
+            else if (institution === "대한상공회의소") {
+                // 대한상공회의소 진위 조회
+                await daehanLoginAndVerify(item, delayTime);
+            } 
             else if (institution === "국사편찬위원회") {
                 await hanguksaVerify(item, delayTime);
             } 
 
-            // else if(institution ==='한국생산성본부'){
-            //     await kpcLicenseVerify(item, delayTime);
-            // }
-            // else if(institution ==='opic'){
-            //     await opicVerify(item, delayTime);
-            // }
+            else if(institution ==='한국생산성본부'){
+                await kpcLicenseVerify(item, delayTime);
+            }
+            else if(institution ==='opic'){
+                await opicVerify(item, delayTime);
+            }
             else if (institution === '초본') {
                 await govVerify(item, delayTime, "초본");
             }

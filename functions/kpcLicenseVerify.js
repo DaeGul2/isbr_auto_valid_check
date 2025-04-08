@@ -2,6 +2,7 @@ const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const path = require("path");
 const fs = require("fs");
+const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
 
 
 
@@ -97,7 +98,7 @@ async function kpcLicenseVerify(item, delayTime) {
         await delay(delayTime); // 결과 로드 대기
 
         // 스크린샷 저장
-        const resultScreenshotPath = path.join(screenshotDir, `${item.name}_kpc_result.png`);
+        const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
         await page.screenshot({ path: resultScreenshotPath });
         console.log(`결과 페이지 스크린샷 저장: ${resultScreenshotPath}`);
 
