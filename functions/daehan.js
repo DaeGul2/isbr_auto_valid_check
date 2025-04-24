@@ -13,7 +13,7 @@ function delay(ms) {
 // 대한상공회의소 진위 조회 함수
 async function daehanLoginAndVerify(item, delayTime, directoryName) {
     // 스크린샷 디렉토리 생성
-    const screenshotDir = "./images/자격증/"+directoryName;
+    const screenshotDir = "./images/자격증/" + directoryName;
     if (!fs.existsSync(screenshotDir)) {
         fs.mkdirSync(screenshotDir); // 디렉토리가 없으면 생성
     }
@@ -79,12 +79,6 @@ async function daehanLoginAndVerify(item, delayTime, directoryName) {
             return Array.from(resultList).map((el) => el.textContent.trim());
         });
 
-        // 결과 스크린샷 저장
-        // const resultScreenshotPath = path.join(screenshotDir, `${item.name}_${item.certificateName}_result.png`);
-        const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
-
-        await page.screenshot({ path: resultScreenshotPath });
-        console.log(`결과 페이지 스크린샷 저장: ${resultScreenshotPath}`);
 
         // 진위 여부 처리
         if (resultText.some((text) => text.includes("종목명"))) {
@@ -93,6 +87,13 @@ async function daehanLoginAndVerify(item, delayTime, directoryName) {
             item.subs = subject;
             item.date = date;
             item.result = 1;
+            // 결과 스크린샷 저장
+            // const resultScreenshotPath = path.join(screenshotDir, `${item.name}_${item.certificateName}_result.png`);
+            const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
+
+            await page.screenshot({ path: resultScreenshotPath });
+            console.log(`결과 페이지 스크린샷 저장: ${resultScreenshotPath}`);
+
             console.log(`${item.name}, 합격 여부 : 합격\n종목명 : ${subject}\n합격일 : ${date}`);
         } else {
             item.subs = "";

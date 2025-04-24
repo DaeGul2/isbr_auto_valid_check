@@ -81,90 +81,43 @@ async function insuranceNhis(item, delayTime) {
 
         console.log("✅ 검증 버튼 클릭 성공");
 
-        // (6) alert 메시지 확인 및 스크린샷 저장
-        await delay(2000); // 2초 대기
-        const alertMessage = await page.evaluate(() => {
-            return window.lastAlertMessage || null;
+        await page.waitForSelector('.modal-dialog', { visible: true, timeout: 10000 });
+
+        const modalText = await page.evaluate(() => {
+            const modalDivs = Array.from(document.querySelectorAll("div.modal-dialog .modal-content .modal-conts .conts-area"));
+            if (modalDivs.length === 0) return null;
+            return modalDivs[0].textContent.trim();
         });
-
-        if (alertMessage) {
-            console.log(`📋 감지된 alert 메시지: ${alertMessage}`);
-
-            // alert 메시지를 화면 중앙에 띄우기 위해 DOM에 삽입 (UI 개선)
-            await page.evaluate((message) => {
-                const alertOverlay = document.createElement("div");
-                alertOverlay.style.position = "fixed";
-                alertOverlay.style.top = "50%";
-                alertOverlay.style.left = "50%";
-                alertOverlay.style.transform = "translate(-50%, -50%)";
-                alertOverlay.style.background = "white";
-                alertOverlay.style.padding = "30px";
-                alertOverlay.style.border = "1px solid #ccc";
-                alertOverlay.style.borderRadius = "10px";
-                alertOverlay.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.1)";
-                alertOverlay.style.zIndex = 9999;
-                alertOverlay.style.fontSize = "16px";
-                alertOverlay.style.color = "#333";
-                alertOverlay.style.textAlign = "left";
-
-                // 제목
-                const title = document.createElement("div");
-                title.style.fontSize = "18px";
-                title.style.fontWeight = "bold";
-                title.style.marginBottom = "10px";
-                title.textContent = "www.nhis.or.kr 내용:";
-                alertOverlay.appendChild(title);
-
-                // 메시지
-                const content = document.createElement("div");
-                content.textContent = message;
-                alertOverlay.appendChild(content);
-
-                // 확인 버튼
-                const button = document.createElement("button");
-                button.textContent = "확인";
-                button.style.marginTop = "20px";
-                button.style.padding = "10px 20px";
-                button.style.border = "none";
-                button.style.borderRadius = "5px";
-                button.style.background = "#007bff";
-                button.style.color = "white";
-                button.style.cursor = "pointer";
-                button.style.fontSize = "14px";
-                button.onclick = () => {
-                    alertOverlay.remove();
-                };
-                alertOverlay.appendChild(button);
-
-                document.body.appendChild(alertOverlay);
-            }, alertMessage);
-
-            // 스크린샷 저장
-            const screenshotPath = path.join(
-                screenshotDir,
-                `${item.registerationNumber}_건보자격득실확인서_건보홈페이지.png`
-            );
-            await page.screenshot({ path: screenshotPath });
-            console.log(`📸 alert 스크린샷 저장 완료: ${screenshotPath}`);
-
-            // 메시지에 따라 결과 처리
-            if (alertMessage.includes("발급받은 이력이 있습니다")) {
-                console.log("✅ 발급 이력 있음");
-                item.result = 1; // 성공
-            } else if (alertMessage.includes("조회된 내역이 없습니다")) {
-                console.log("❌ 발급 이력 없음");
-                item.result = 0; // 실패
-            } else if (alertMessage.includes("조회 중 오류가 발생하였습니다")) {
-                console.log("⚠️ 조회 중 오류 발생");
-                item.result = 0; // 실패
+        
+        if (modalText) {
+            console.log("📋 모달 텍스트 감지:", modalText);
+        
+            if (modalText.includes("발급받은 이력이 있습니다")) {
+                item.result = 1;
+        
+                // ✅ 스크린샷 저장
+                const screenshotPath = path.join(
+                    screenshotDir,
+                    `${item.registerationNumber}_건보자격득실확인서_건보홈페이지.png`
+                );
+                await page.screenshot({ path: screenshotPath });
+                console.log("📸 스크린샷 저장 완료:", screenshotPath);
+            } else if (modalText.includes("발급받은 사실이 없습니다")) {
+                item.result = 0;
             } else {
-                console.log("⚠️ 알 수 없는 alert 메시지");
-                item.result = 0; // 기본 실패 처리
+                console.log("⚠️ 예외 메시지:", modalText);
+                item.result = 0;
             }
+        
+            // 확인 버튼 누르기
+            const confirmBtn = await page.$("#modal-confirm");
+            if (confirmBtn) await confirmBtn.click();
+            console.log("🖱️ 확인 버튼 클릭 완료");
         } else {
-            console.log("❌ alert 메시지를 감지하지 못했습니다.");
-            item.result = 0; // 실패
+            console.log("❌ 모달 텍스트를 찾지 못했음");
+            item.result = 0;
         }
+        
 
         await delay(delayTime);
     } catch (error) {

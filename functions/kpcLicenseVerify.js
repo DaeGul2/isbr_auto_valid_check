@@ -40,7 +40,7 @@ function delay(ms) {
 }
 
 // 한국생산성본부 진위확인 함수
-async function kpcLicenseVerify(item, delayTime,directoryName) {
+async function kpcLicenseVerify(item, delayTime, directoryName) {
     // 스크린샷 디렉토리 생성
     const screenshotDir = "./images/자격증/" + directoryName;
     if (!fs.existsSync(screenshotDir)) {
@@ -98,10 +98,7 @@ async function kpcLicenseVerify(item, delayTime,directoryName) {
         await page.click("button.btn.btn_xl.col-12-s.bg_red.text_color_white"); // 진위 확인 버튼 클릭
         await delay(delayTime); // 결과 로드 대기
 
-        // 스크린샷 저장
-        const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
-        await page.screenshot({ path: resultScreenshotPath });
-        console.log(`결과 페이지 스크린샷 저장: ${resultScreenshotPath}`);
+
 
         // 결과 확인 및 처리
         const result = await page.evaluate(() => {
@@ -138,6 +135,10 @@ async function kpcLicenseVerify(item, delayTime,directoryName) {
             const { 자격종목 } = result.data;
             item.subs = 자격종목; // 자격종목 저장
             item.result = 1; // 성공
+            // 스크린샷 저장
+            const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
+            await page.screenshot({ path: resultScreenshotPath });
+            console.log(`결과 페이지 스크린샷 저장: ${resultScreenshotPath}`);
             console.log(`${item.name}, 합격 여부 : 성공\n자격종목 : ${자격종목}`);
         } else {
             item.subs = ""; // 자격종목 없음

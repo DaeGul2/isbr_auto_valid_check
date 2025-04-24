@@ -70,7 +70,7 @@ async function closePopupIfPresent(page) {
 // 세무사회 자격증 진위여부 확인 함수
 async function semuVerify(item, delayTime, directoryName) {
     // 스크린샷 저장 디렉토리 설정
-    const screenshotDir = "./images/자격증/"+directoryName;
+    const screenshotDir = "./images/자격증/" + directoryName;
     if (!fs.existsSync(screenshotDir)) {
         fs.mkdirSync(screenshotDir, { recursive: true });
     }
@@ -143,13 +143,7 @@ async function semuVerify(item, delayTime, directoryName) {
         page.on("dialog", async (dialog) => {
             console.log(`Alert 발생: ${dialog.message()}`);
 
-            // 현재 상태 스크린샷 저장
-            const alertScreenshotPath = path.join(
-                screenshotDir,
-                `${item.name}_alert.png`
-            );
-            await page.screenshot({ path: alertScreenshotPath });
-            console.log(`Alert 스크린샷 저장: ${alertScreenshotPath}`);
+
 
             item.result = 0;
             item.error = "유효하지 않은 자격번호";
@@ -161,11 +155,6 @@ async function semuVerify(item, delayTime, directoryName) {
         // 결과 로드 대기
         await delay(delayTime);
 
-        // 페이지 전체 스크린샷 저장
-        // const resultScreenshotPath = path.join(screenshotDir,`${item.name}_semu_full_result.png`);
-        const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
-        await page.screenshot({ path: resultScreenshotPath, fullPage: true });
-        console.log(`전체 페이지 스크린샷 저장: ${resultScreenshotPath}`);
 
         // 결과 확인 및 처리
         const result = await page.evaluate(() => {
@@ -192,6 +181,12 @@ async function semuVerify(item, delayTime, directoryName) {
             item.subs = 종목;
             item.date = 합격일자;
             item.result = 1;
+            // 페이지 전체 스크린샷 저장
+            // const resultScreenshotPath = path.join(screenshotDir,`${item.name}_semu_full_result.png`);
+            const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
+            await page.screenshot({ path: resultScreenshotPath, fullPage: true });
+            console.log(`전체 페이지 스크린샷 저장: ${resultScreenshotPath}`);
+
             console.log(
                 `${item.name}, 진위 여부 : 성공\n종목 : ${종목}, 합격일자 : ${합격일자}`
             );

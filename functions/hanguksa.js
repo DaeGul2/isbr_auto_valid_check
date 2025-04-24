@@ -33,9 +33,9 @@ function delay(ms) {
 }
 
 // 한국사 사이트 검증 함수
-async function hanguksaVerify(item, delayTime,directoryName) {
+async function hanguksaVerify(item, delayTime, directoryName) {
     // 스크린샷 디렉토리 생성
-    const screenshotDir = "./images/자격증/"+directoryName;
+    const screenshotDir = "./images/자격증/" + directoryName;
     if (!fs.existsSync(screenshotDir)) {
         fs.mkdirSync(screenshotDir); // 디렉토리가 없으면 생성
     }
@@ -95,11 +95,7 @@ async function hanguksaVerify(item, delayTime,directoryName) {
         await page.click("#btnConfirm");
         await delay(delayTime); // 결과 로드 대기
 
-        // 결과 스크린샷 저장
-        // const resultScreenshotPath = path.join(screenshotDir, `${item.name}_한국사_result.png`);
-        const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
-        await page.screenshot({ path: resultScreenshotPath });
-        console.log(`결과 페이지 스크린샷 저장: ${resultScreenshotPath}`);
+
 
         const result = await page.evaluate(() => {
             const tbody = document.querySelector("tbody");
@@ -150,6 +146,11 @@ async function hanguksaVerify(item, delayTime,directoryName) {
                 item.result = 0;
             }
             item.subs = `한국사능력검정시험${등급}`; // 등급 및 합격여부 저장
+            // 결과 스크린샷 저장
+            // const resultScreenshotPath = path.join(screenshotDir, `${item.name}_한국사_result.png`);
+            const resultScreenshotPath = getResultScreenshotPath(screenshotDir, item);
+            await page.screenshot({ path: resultScreenshotPath });
+            console.log(`결과 페이지 스크린샷 저장: ${resultScreenshotPath}`);
             console.log(
                 `${item.name}, 합격 여부 : 합격\n회차 : ${회차}\n등급 : ${등급}, 합격여부 : ${합격여부}`
             );
