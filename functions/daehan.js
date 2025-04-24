@@ -3,11 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
 
-// 스크린샷 디렉토리 생성
-const screenshotDir = "./images/자격증";
-if (!fs.existsSync(screenshotDir)) {
-    fs.mkdirSync(screenshotDir); // 디렉토리가 없으면 생성
-}
+
 
 // 지정된 시간만큼 딜레이를 추가하는 함수
 function delay(ms) {
@@ -15,7 +11,12 @@ function delay(ms) {
 }
 
 // 대한상공회의소 진위 조회 함수
-async function daehanLoginAndVerify(item, delayTime) {
+async function daehanLoginAndVerify(item, delayTime, directoryName) {
+    // 스크린샷 디렉토리 생성
+    const screenshotDir = "./images/자격증/"+directoryName;
+    if (!fs.existsSync(screenshotDir)) {
+        fs.mkdirSync(screenshotDir); // 디렉토리가 없으면 생성
+    }
     const browser = await puppeteer.launch({
         headless: false, // 브라우저 표시
         args: ["--start-maximized"], // 창 최대화

@@ -2,12 +2,8 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
+const { dir } = require("console");
 
-// 스크린샷 디렉토리 생성
-const screenshotDir = "./images/자격증";
-if (!fs.existsSync(screenshotDir)) {
-    fs.mkdirSync(screenshotDir); // 디렉토리가 없으면 생성
-}
 
 function parseBirth(birth) {
     if (!birth) {
@@ -37,7 +33,13 @@ function delay(ms) {
 }
 
 // 한국사 사이트 검증 함수
-async function hanguksaVerify(item, delayTime) {
+async function hanguksaVerify(item, delayTime,directoryName) {
+    // 스크린샷 디렉토리 생성
+    const screenshotDir = "./images/자격증/"+directoryName;
+    if (!fs.existsSync(screenshotDir)) {
+        fs.mkdirSync(screenshotDir); // 디렉토리가 없으면 생성
+    }
+
     const browser = await puppeteer.launch({
         headless: false, // 브라우저 표시
         args: ["--start-maximized"], // 창 최대화

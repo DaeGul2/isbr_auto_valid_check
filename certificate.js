@@ -29,7 +29,7 @@ function writeExcel(data, outputFilePath) {
 
 // 실행
 (async () => {
-    const filePath = "./data/한국사_생일포함테스트.xlsx"; // 입력 엑셀 파일 경로
+    const filePath = "./data/0424_건근공/0424_건설근로자공제회 진위조회 요청_이규성.xlsx"; // 입력 엑셀 파일 경로
     const outputFilePath = "./results/result.xlsx"; // 결과를 저장할 엑셀 파일 경로
 
     // 데이터 읽기
@@ -45,37 +45,40 @@ function writeExcel(data, outputFilePath) {
         try {
             if (institution === "한국세무사회") {
                 // 대한상공회의소 진위 조회
-                await semuVerify(item, delayTime);
+                await semuVerify(item, delayTime,"한국세무사회");
             }
             else if (institution === "대한상공회의소") {
                 // 대한상공회의소 진위 조회
-                await daehanLoginAndVerify(item, delayTime);
+                await daehanLoginAndVerify(item, delayTime,"대한상공회의소");
             } 
             else if (institution === "국사편찬위원회") {
-                await hanguksaVerify(item, delayTime);
+                await hanguksaVerify(item, delayTime, "국사편찬위원회");
             } 
 
             else if(institution ==='한국생산성본부'){``
-                await kpcLicenseVerify(item, delayTime);
+                await kpcLicenseVerify(item, delayTime,"한국생산성본부");
             }
             else if(institution.toLowerCase() ==='opic'){
                 await opicVerify(item, delayTime);
             }
             else if (institution === '초본') {
-                await govVerify(item, delayTime, "초본");
+                await govVerify(item, delayTime+2000, "초본");
             }
             else if (institution === '성적증명서') {
-                await govVerify(item, delayTime, "성적증명서");
+                await govVerify(item, delayTime+2000, "성적증명서");
+            }
+            else if (institution === '졸업증명서') {
+                await govVerify(item, delayTime+2000, "졸업증명서");
             }
             else if (institution === '등본') {
-                await govVerify(item, delayTime, "등본");
+                await govVerify(item, delayTime+2000, "등본");
             }
             else if (institution === "건강보험자격득실확인서") {
                 const passNum = (item.passNum || "").trim(); // 공백 제거
 
                 // 1730-3002-0530-3240 형식 (숫자-숫자-숫자-숫자)
                 if (/^\d{4}-\d{4}-\d{4}-\d{4}$/.test(passNum)) {
-                    await govVerify(item, delayTime, "건강보험자격득실확인서");
+                    await govVerify(item, delayTime+2000, "건강보험자격득실확인서");
                 }
                 
                 else {

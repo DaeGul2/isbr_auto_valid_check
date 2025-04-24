@@ -66,7 +66,7 @@ async function govVerify(item, delayTime, fileName) {
                 }
             }, docKeyInputSelector);
 
-            await delay(500); // 스크롤 이동 후 대기
+            await delay(1500); // 스크롤 이동 후 대기
 
             await page.type(docKeyInputSelector, item.name); // 성명 입력
             await page.click("#btn_end");
