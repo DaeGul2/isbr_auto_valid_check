@@ -9,6 +9,28 @@ if (!fs.existsSync(screenshotDir)) {
     fs.mkdirSync(screenshotDir); // 디렉토리가 없으면 생성
 }
 
+function parseBirth(birth) {
+    if (!birth) {
+        throw new Error("생년월일 데이터가 없습니다.");
+    }
+
+    // 문자열로 변환하고 숫자만 남김
+    const raw = String(birth).replace(/[^0-9]/g, "");
+
+    if (raw.length === 6) {
+        // yyMMdd
+        const year = parseInt(raw.slice(0, 2), 10);
+        const prefix = year >= 50 ? "19" : "20"; // 50 이상이면 1900년대, 이하이면 2000년대
+        return `${prefix}${raw}`;
+    } else if (raw.length === 8) {
+        // yyyyMMdd
+        return raw;
+    } else {
+        throw new Error(`생년월일 형식이 올바르지 않습니다: ${birth}`);
+    }
+}
+
+
 // 지정된 시간만큼 딜레이를 추가하는 함수
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,6 +81,13 @@ async function hanguksaVerify(item, delayTime) {
             document.querySelector("#certi_back").value = "";
         });
         await page.type("#certi_back", secondNum);
+
+        // 생년월일 입력
+        const formattedBirth = parseBirth(item.birth);
+        await page.evaluate(() => {
+            document.querySelector("#birth").value = "";
+        });
+        await page.type("#birth", formattedBirth);
 
         // 인증번호 확인 버튼 클릭
         await page.click("#btnConfirm");
@@ -112,7 +141,7 @@ async function hanguksaVerify(item, delayTime) {
         if (result?.isValid) {
             const { 회차, 성명, 등급, 합격여부 } = result.data;
             item.date = 회차; // 회차를 date에 저장
-            
+
             if (합격여부.trim() === '합격') {
                 item.result = 1;
             } else {
