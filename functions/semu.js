@@ -23,6 +23,29 @@ async function closePopupIfPresent(page) {
     try {
         const popupCheckboxSelector = "input[type='checkbox'][id='ckbox1']"; // '오늘 하루 열지 않기' 체크박스
         const closePopupButtonSelector = 'img[onclick="myjbpop1_temp()"]'; // 팝업 닫기 버튼
+          // 추가 팝업1 닫기 (class="pop_wrap" 기반)
+          const popup1CloseSelector = '.pop_wrap img[onclick="my_web_pop1_temp()"]';
+          const popup1CloseBtn = await page.$(popup1CloseSelector);
+          if (popup1CloseBtn) {
+              console.log("추가 팝업1 닫기 버튼 클릭 중...");
+              await popup1CloseBtn.click();
+              await delay(1000);
+              console.log("추가 팝업1 닫기 완료");
+          } else {
+              console.log("추가 팝업1이 감지되지 않음.");
+          }
+  
+          // 추가 팝업2 닫기 (class="pop_wrap1" 기반)
+          const popup2CloseSelector = '.pop_wrap1 img[onclick="my_web_pop2_temp()"]';
+          const popup2CloseBtn = await page.$(popup2CloseSelector);
+          if (popup2CloseBtn) {
+              console.log("추가 팝업2 닫기 버튼 클릭 중...");
+              await popup2CloseBtn.click();
+              await delay(1000);
+              console.log("추가 팝업2 닫기 완료");
+          } else {
+              console.log("추가 팝업2가 감지되지 않음.");
+          }
 
         // '오늘 하루 열지 않기' 체크박스 클릭
         const checkbox = await page.$(popupCheckboxSelector);

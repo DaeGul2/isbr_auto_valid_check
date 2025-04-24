@@ -29,7 +29,7 @@ function writeExcel(data, outputFilePath) {
 
 // 실행
 (async () => {
-    const filePath = "./data/한국생산성본부 진위조회 요청.xlsx"; // 입력 엑셀 파일 경로
+    const filePath = "./data/0424_건설근로자공제회 진위조회 요청_이규성.xlsx"; // 입력 엑셀 파일 경로
     const outputFilePath = "./results/result.xlsx"; // 결과를 저장할 엑셀 파일 경로
 
     // 데이터 읽기
@@ -55,14 +55,20 @@ function writeExcel(data, outputFilePath) {
                 await hanguksaVerify(item, delayTime);
             } 
 
-            else if(institution ==='한국생산성본부'){
+            else if(institution ==='한국생산성본부'){``
                 await kpcLicenseVerify(item, delayTime);
             }
-            else if(institution ==='opic'){
+            else if(institution.toLowerCase() ==='opic'){
                 await opicVerify(item, delayTime);
             }
             else if (institution === '초본') {
                 await govVerify(item, delayTime, "초본");
+            }
+            else if (institution === '성적증명서') {
+                await govVerify(item, delayTime, "성적증명서");
+            }
+            else if (institution === '등본') {
+                await govVerify(item, delayTime, "등본");
             }
             else if (institution === "건강보험자격득실확인서") {
                 const passNum = (item.passNum || "").trim(); // 공백 제거

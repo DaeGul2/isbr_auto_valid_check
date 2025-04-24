@@ -77,7 +77,7 @@ async function kpcLicenseVerify(item, delayTime) {
     try {
         // 생년월일 파싱
         const formattedBirth = parseBirth(item.birth); // 다양한 형식의 birth를 처리하여 yyyymmdd로 변환
-
+        console.log("생년월일 : ",formattedBirth);
         // 자격번호 파싱
         const licenseCode = item.passNum.replace(/-/g, ""); // '-' 제거
 
