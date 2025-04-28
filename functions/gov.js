@@ -88,7 +88,7 @@ async function govVerify(item, delayTime, fileName) {
 
                 const pages = await browser.pages();
                 const newPage = pages[pages.length - 1];
-
+                await delay(delayTime);
                 // temp2 사진 촬영
                 const temp2Path = path.join(tempDir, "temp2.png");
                 await newPage.screenshot({ path: temp2Path });
