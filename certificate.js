@@ -9,6 +9,7 @@ const { opicVerify } = require('./functions/opic');
 const { semuVerify } = require('./functions/semu');
 const { insuranceNhis } = require('./functions/insuranceNhis'); // 건보홈페이지 건보득실확인서
 const { govVerify } = require('./functions/gov');
+const {npsVerify} = require('./functions/npsVerify')
 require('dotenv').config();
 
 const institutionCounter = {}; // ✅ institutionCounter 추가
@@ -33,7 +34,7 @@ function writeExcel(data, outputFilePath) {
 
 // 실행
 (async () => {
-    const filePath = "./data/건보_자격득실테스트.xlsx"; // 입력 엑셀 파일 경로
+    const filePath = "./data/연금테스트.xlsx"; // 입력 엑셀 파일 경로
     const outputFilePath = "./results/result.xlsx"; // 결과를 저장할 엑셀 파일 경로
 
     // 데이터 읽기
@@ -88,6 +89,20 @@ function writeExcel(data, outputFilePath) {
 
                 else {
                     await insuranceNhis(item, delayTime);
+                }
+
+
+            }
+            else if (institution === "국민연금가입자증명") {
+                const passNum = (item.passNum || "").trim(); // 공백 제거
+
+                // 1730-3002-0530-3240 형식 (숫자-숫자-숫자-숫자)
+                if (/^\d{4}-\d{4}-\d{4}-\d{4}$/.test(passNum)) {
+                    await govVerify(item, delayTime + 2000, "국민연금가입자증명");
+                }
+
+                else {
+                    await npsVerify(item, delayTime);
                 }
 
 
