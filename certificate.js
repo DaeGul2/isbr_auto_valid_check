@@ -29,7 +29,7 @@ function writeExcel(data, outputFilePath) {
 
 // 실행
 (async () => {
-    const filePath = "./data/정부24테스트.xlsx"; // 입력 엑셀 파일 경로
+    const filePath = "./data/건보_자격득실테스트.xlsx"; // 입력 엑셀 파일 경로
     const outputFilePath = "./results/result.xlsx"; // 결과를 저장할 엑셀 파일 경로
 
     // 데이터 읽기

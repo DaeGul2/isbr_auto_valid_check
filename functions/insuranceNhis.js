@@ -1,6 +1,7 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
+const cheerio = require("cheerio");  // ✅ 추가: cheerio 불러오기
 
 // 스크린샷 저장 디렉토리
 const screenshotDir = "./images/건강보험자격득실확인서";
@@ -37,7 +38,7 @@ async function insuranceNhis(item, delayTime) {
         });
         console.log("✅ alert 감지 오버라이드 설정 완료");
 
-        // (3) 자격득실확인서 체크
+        // (3) 자격득실확인서 라디오 버튼 체크
         const radioSelector = "#r02";
         await page.waitForSelector(radioSelector, { visible: true });
         await page.click(radioSelector);
@@ -48,12 +49,11 @@ async function insuranceNhis(item, delayTime) {
         const passNumInputSelector = "#docRefCopy";
         await page.waitForSelector(passNumInputSelector, { visible: true });
         await page.type(passNumInputSelector, passNum);
-        console.log("✅ 발급번호 입력 완료: ", passNum);
+        console.log("✅ 발급번호 입력 완료:", passNum);
 
         // (5) 검증 버튼 클릭
         const buttonControlSelector = "#buttonControl2";
         const verifyButtonSelector = "#imgNhic";
-
         await page.waitForSelector(buttonControlSelector, { visible: true });
         await page.waitForFunction(
             (buttonControlSelector, verifyButtonSelector) => {
@@ -66,8 +66,6 @@ async function insuranceNhis(item, delayTime) {
             buttonControlSelector,
             verifyButtonSelector
         );
-
-        // 버튼 클릭
         await page.evaluate((buttonControlSelector, verifyButtonSelector) => {
             const container = document.querySelector(buttonControlSelector);
             const button = container.querySelector(verifyButtonSelector);
@@ -78,51 +76,57 @@ async function insuranceNhis(item, delayTime) {
                 console.error("❌ 검증 버튼을 찾을 수 없습니다.");
             }
         }, buttonControlSelector, verifyButtonSelector);
-
         console.log("✅ 검증 버튼 클릭 성공");
 
-        await page.waitForSelector('.modal-dialog', { visible: true, timeout: 10000 });
+        // (6-1) 모달이 뜰 때까지 기다리기
+        await page.waitForSelector('#common-ALERT-modal', { visible: true, timeout: 10000 });
+        console.log("✅ common-ALERT-modal 등장 감지");
 
-        const modalText = await page.evaluate(() => {
-            const modalDivs = Array.from(document.querySelectorAll("div.modal-dialog .modal-content .modal-conts .conts-area"));
-            if (modalDivs.length === 0) return null;
-            return modalDivs[0].textContent.trim();
-        });
+        // (7) 현재 페이지 전체 HTML 가져오기
+        const htmlContent = await page.content();
+
+        // (7-2) cheerio로 modal-dialog 블록 파싱
+        const $ = cheerio.load(htmlContent);
+        const parsedModalDialog = $('#common-ALERT-modal .modal-dialog').parent().html().trim();
         
-        if (modalText) {
-            console.log("📋 모달 텍스트 감지:", modalText);
+
         
-            if (modalText.includes("발급받은 이력이 있습니다")) {
-                item.result = 1;
+
+        // (8) 모달 안의 메시지 텍스트 읽기 (추가로)
+        const parsedModalMessage = $('#common-ALERT-modal #modal-message').text().trim();
         
-                // ✅ 스크린샷 저장
-                const screenshotPath = path.join(
-                    screenshotDir,
-                    `${item.registerationNumber}_건보자격득실확인서_건보홈페이지.png`
-                );
-                await page.screenshot({ path: screenshotPath });
-                console.log("📸 스크린샷 저장 완료:", screenshotPath);
-            } else if (modalText.includes("발급받은 사실이 없습니다")) {
-                item.result = 0;
-            } else {
-                console.log("⚠️ 예외 메시지:", modalText);
-                item.result = 0;
-            }
-        
-            // 확인 버튼 누르기
-            const confirmBtn = await page.$("#modal-confirm");
-            if (confirmBtn) await confirmBtn.click();
-            console.log("🖱️ 확인 버튼 클릭 완료");
+
+        // (9) 결과 처리 및 스크린샷 저장
+        if (parsedModalMessage.includes("발급받은 이력이 있습니다")) {
+            item.result = 1;
+            const screenshotPath = path.join(
+                screenshotDir,
+                `${item.registerationNumber}_건보자격득실확인서_건보홈페이지.png`
+            );
+            await page.screenshot({ path: screenshotPath });
+            console.log("📸 스크린샷 저장 완료:", screenshotPath);
+        } else if (parsedModalMessage.includes("발급받은 사실이 없습니다")) {
+            item.result = 0;
         } else {
-            console.log("❌ 모달 텍스트를 찾지 못했음");
+            console.log("⚠️ 예외 메시지 (특이 케이스):", parsedModalMessage);
             item.result = 0;
         }
-        
 
+        // (10) 모달 확인 버튼 클릭
+        await page.evaluate(() => {
+            const confirmButton = document.querySelector("#modal-confirm");
+            if (confirmButton) {
+                confirmButton.click();
+            }
+        });
+        console.log("🖱️ 모달 확인 버튼 클릭 완료");
+
+        // (11) 지정된 딜레이만큼 대기
         await delay(delayTime);
+
     } catch (error) {
         console.error(`${item.name} 처리 중 오류 발생:`, error);
-        item.result = 0; // 처리 실패
+        item.result = 0;
     } finally {
         await browser.close();
     }
