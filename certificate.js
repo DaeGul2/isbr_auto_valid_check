@@ -9,6 +9,10 @@ const { opicVerify } = require('./functions/opic');
 const { semuVerify } = require('./functions/semu');
 const { insuranceNhis } = require('./functions/insuranceNhis'); // 건보홈페이지 건보득실확인서
 const { govVerify } = require('./functions/gov');
+require('dotenv').config();
+
+const institutionCounter = {}; // ✅ institutionCounter 추가
+let status = 1;                 // ✅ status 추가 (기본 정상 = 1)
 
 // 엑셀 데이터를 읽는 함수
 function readExcel(filePath) {
@@ -45,46 +49,47 @@ function writeExcel(data, outputFilePath) {
         try {
             if (institution === "한국세무사회") {
                 // 대한상공회의소 진위 조회
-                await semuVerify(item, delayTime,"한국세무사회");
+                await semuVerify(item, delayTime, "한국세무사회");
             }
             else if (institution === "대한상공회의소") {
                 // 대한상공회의소 진위 조회
-                await daehanLoginAndVerify(item, delayTime,"대한상공회의소");
-            } 
+                await daehanLoginAndVerify(item, delayTime, "대한상공회의소");
+            }
             else if (institution === "국사편찬위원회") {
                 await hanguksaVerify(item, delayTime, "국사편찬위원회");
-            } 
-
-            else if(institution ==='한국생산성본부'){``
-                await kpcLicenseVerify(item, delayTime,"한국생산성본부");
             }
-            else if(institution.toLowerCase() ==='opic'){
+
+            else if (institution === '한국생산성본부') {
+                ``
+                await kpcLicenseVerify(item, delayTime, "한국생산성본부");
+            }
+            else if (institution.toLowerCase() === 'opic') {
                 await opicVerify(item, delayTime);
             }
             else if (institution === '초본') {
-                await govVerify(item, delayTime+2000, "초본");
+                await govVerify(item, delayTime + 2000, "초본");
             }
             else if (institution === '성적증명서') {
-                await govVerify(item, delayTime+2000, "성적증명서");
+                await govVerify(item, delayTime + 2000, "성적증명서");
             }
             else if (institution === '졸업증명서') {
-                await govVerify(item, delayTime+2000, "졸업증명서");
+                await govVerify(item, delayTime + 2000, "졸업증명서");
             }
             else if (institution === '등본') {
-                await govVerify(item, delayTime+2000, "등본");
+                await govVerify(item, delayTime + 2000, "등본");
             }
             else if (institution === "건강보험자격득실확인서") {
                 const passNum = (item.passNum || "").trim(); // 공백 제거
 
                 // 1730-3002-0530-3240 형식 (숫자-숫자-숫자-숫자)
                 if (/^\d{4}-\d{4}-\d{4}-\d{4}$/.test(passNum)) {
-                    await govVerify(item, delayTime+2000, "건강보험자격득실확인서");
+                    await govVerify(item, delayTime + 2000, "건강보험자격득실확인서");
                 }
-                
+
                 else {
                     await insuranceNhis(item, delayTime);
                 }
-                
+
 
             }
 
@@ -99,6 +104,22 @@ function writeExcel(data, outputFilePath) {
             console.error(`${item.name} 처리 중 오류 발생:`, error);
             item.error = error.message; // 오류 메시지를 item에 저장
         }
+    }
+    try {
+        const { sendLog } = await import('isbr_util');
+        await sendLog({
+            appName: "진위조회",
+            functionName: "verifyCertification",
+            userName: "민태희",
+            extra: {
+                people_count: globalExcelData.length,
+                institution_count: institutionCounter,
+                status: status
+            }
+        });
+        console.log("✅ 로그 전송 완료");
+    } catch (logError) {
+        console.error("❌ 로그 전송 실패:", logError);
     }
 
     // 전역 데이터 저장

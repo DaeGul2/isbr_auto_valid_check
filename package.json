@@ -11,7 +11,9 @@
   "description": "",
   "dependencies": {
     "cheerio": "^1.0.0",
+    "dotenv": "^16.5.0",
     "fs": "^0.0.1-security",
+    "isbr_util": "github:DaeGuL2/isbr_util",
     "path": "^0.12.7",
     "puppeteer": "^23.9.0",
     "puppeteer-extra": "^3.3.6",
