@@ -9,7 +9,7 @@ const { opicVerify } = require('./functions/opic');
 const { semuVerify } = require('./functions/semu');
 const { insuranceNhis } = require('./functions/insuranceNhis'); // 건보홈페이지 건보득실확인서
 const { govVerify } = require('./functions/gov');
-const {npsVerify} = require('./functions/npsVerify')
+const { npsVerify } = require('./functions/npsVerify')
 require('dotenv').config();
 
 const institutionCounter = {}; // ✅ institutionCounter 추가
@@ -34,8 +34,8 @@ function writeExcel(data, outputFilePath) {
 
 // 실행
 (async () => {
-    const filePath = "./data/연금테스트.xlsx"; // 입력 엑셀 파일 경로
-    const outputFilePath = "./results/result.xlsx"; // 결과를 저장할 엑셀 파일 경로
+    const filePath = "./data/양식_초본.xlsx"; // 입력 엑셀 파일 경로
+    const outputFilePath = "./results/양식_초본_result.xlsx"; // 결과를 저장할 엑셀 파일 경로
 
     // 데이터 읽기
     const globalExcelData = readExcel(filePath); // 전역적으로 관리될 엑셀 데이터
@@ -108,6 +108,10 @@ function writeExcel(data, outputFilePath) {
 
             }
 
+            else if (institution === '어학성적 사전등록 확인서') {
+                await govVerify(item, delayTime + 2000, "어학성적_사전등록_확인서");
+            }
+
             //  else             if (institution === "한국데이터산업진흥원") {
             //     await dataSaneopVerify(item, globalExcelData);
             // }   // 데이터 산업진흥원은 막혀있음 ㅠㅠ
@@ -125,7 +129,7 @@ function writeExcel(data, outputFilePath) {
         await sendLog({
             appName: "진위조회",
             functionName: "verifyCertification",
-            userName: "민태희",
+            userName: "김응규",
             extra: {
                 people_count: globalExcelData.length,
                 institution_count: institutionCounter,

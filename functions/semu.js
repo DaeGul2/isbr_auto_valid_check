@@ -16,9 +16,10 @@ function delay(ms) {
 // 팝업 닫기 및 체크박스 클릭 함수
 async function closePopupIfPresent(page) {
     try {
-        const popupCheckboxSelector = "input[type='checkbox'][id='ckbox1']"; // '오늘 하루 열지 않기' 체크박스
-        const closePopupButtonSelector = 'img[onclick="myjbpop1_temp()"]'; // 팝업 닫기 버튼
-        // 추가 팝업1 닫기 (class="pop_wrap" 기반)
+        const popupCheckboxSelector = "input[type='checkbox'][id='ckbox1']";
+        const closePopupButtonSelector = 'img[onclick="myjbpop1_temp()"]';
+
+        // 기존 팝업1 닫기
         const popup1CloseSelector = '.pop_wrap img[onclick="my_web_pop1_temp()"]';
         const popup1CloseBtn = await page.$(popup1CloseSelector);
         if (popup1CloseBtn) {
@@ -30,7 +31,7 @@ async function closePopupIfPresent(page) {
             console.log("추가 팝업1이 감지되지 않음.");
         }
 
-        // 추가 팝업2 닫기 (class="pop_wrap1" 기반)
+        // 기존 팝업2 닫기
         const popup2CloseSelector = '.pop_wrap1 img[onclick="my_web_pop2_temp()"]';
         const popup2CloseBtn = await page.$(popup2CloseSelector);
         if (popup2CloseBtn) {
@@ -42,30 +43,52 @@ async function closePopupIfPresent(page) {
             console.log("추가 팝업2가 감지되지 않음.");
         }
 
-        // '오늘 하루 열지 않기' 체크박스 클릭
-        const checkbox = await page.$(popupCheckboxSelector);
-        if (checkbox) {
-            console.log("'오늘 하루 열지 않기' 체크박스 클릭 중...");
-            await checkbox.click();
-            await delay(500); // 클릭 후 딜레이
+        // ✅ 새로 지우려는 팝업 닫기
+        const newPopupCloseBtn = await page.$('.pop_wrap1 img[onclick="my_web_pop1_temp()"]');
+        if (newPopupCloseBtn) {
+            console.log("새 팝업 닫기 버튼 클릭 중...");
+            await newPopupCloseBtn.click();
+            await delay(1000);
+            console.log("새 팝업 닫기 완료");
         } else {
-            console.log("'오늘 하루 열지 않기' 체크박스가 감지되지 않음.");
+            console.log("새 팝업이 감지되지 않음.");
         }
 
-        // 팝업 닫기 버튼 클릭
+        // ✅ 새 팝업 체크박스 클릭
+        const newPopupCheckbox = await page.$('#ckbox1');
+        if (newPopupCheckbox) {
+            console.log("새 팝업 '오늘 하루 열지 않기' 체크박스 클릭 중...");
+            await newPopupCheckbox.click();
+            await delay(500);
+        } else {
+            console.log("새 팝업 체크박스가 감지되지 않음.");
+        }
+
+        // 기존 팝업 닫기 버튼 클릭
         const popupButton = await page.$(closePopupButtonSelector);
         if (popupButton) {
             console.log("팝업 닫기 버튼 클릭 중...");
             await popupButton.click();
-            await delay(1000); // 팝업 닫기 후 딜레이
+            await delay(1000);
             console.log("팝업 닫기 완료");
         } else {
             console.log("팝업이 감지되지 않음.");
+        }
+
+        // 기존 체크박스도 클릭
+        const checkbox = await page.$(popupCheckboxSelector);
+        if (checkbox) {
+            console.log("'오늘 하루 열지 않기' 체크박스 클릭 중...");
+            await checkbox.click();
+            await delay(500);
+        } else {
+            console.log("'오늘 하루 열지 않기' 체크박스가 감지되지 않음.");
         }
     } catch (error) {
         console.error("팝업 닫기 중 오류 발생:", error);
     }
 }
+
 
 // 세무사회 자격증 진위여부 확인 함수
 async function semuVerify(item, delayTime, directoryName) {
@@ -110,7 +133,7 @@ async function semuVerify(item, delayTime, directoryName) {
 
     try {
         console.log("현재 처리 중인 데이터:", item);
-
+        
         // 이름과 자격번호 입력
         const name = String(item.name || "").trim();
         const passNum = String(item.passNum || "").trim();

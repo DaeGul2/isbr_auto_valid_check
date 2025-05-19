@@ -15,7 +15,8 @@ async function govVerify(item, delayTime, fileName) {
         fs.mkdirSync(screenshotDir, { recursive: true });
     }
 
-    const tempDir = `./images/temp`;
+    // ✅ 사람별 temp 폴더 생성
+    const tempDir = `./images/temp/${item.registerationNumber}`;
     if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
     }
@@ -72,7 +73,7 @@ async function govVerify(item, delayTime, fileName) {
             await page.click("#btn_end");
             console.log("성명 입력 및 확인 버튼 클릭");
 
-            // temp1 사진 촬영 (이름 입력 필드 포함)
+            // temp1 사진 촬영
             const temp1Path = path.join(tempDir, "temp1.png");
             await page.screenshot({ path: temp1Path });
             console.log(`📸 temp1 스크린샷 저장 완료: ${temp1Path}`);
@@ -89,18 +90,19 @@ async function govVerify(item, delayTime, fileName) {
                 const pages = await browser.pages();
                 const newPage = pages[pages.length - 1];
                 await delay(delayTime);
+
                 // temp2 사진 촬영
                 const temp2Path = path.join(tempDir, "temp2.png");
                 await newPage.screenshot({ path: temp2Path });
                 console.log(`📸 temp2 스크린샷 저장 완료: ${temp2Path}`);
 
-                // temp1과 temp2를 좌우로 배치한 최종 이미지 저장
+                // 최종 이미지 저장 경로
                 const screenshotPath = path.join(
                     screenshotDir,
                     `${item.registerationNumber}_${fileName}.png`
                 );
 
-                // 두 이미지의 크기 확인 후 합성
+                // 이미지 병합
                 const temp1Meta = await sharp(temp1Path).metadata();
                 const temp2Meta = await sharp(temp2Path).metadata();
 
@@ -112,7 +114,7 @@ async function govVerify(item, delayTime, fileName) {
                         width: totalWidth,
                         height: maxHeight,
                         channels: 3,
-                        background: { r: 255, g: 255, b: 255 }, // 흰 배경
+                        background: { r: 255, g: 255, b: 255 },
                     },
                 })
                     .composite([
@@ -125,7 +127,7 @@ async function govVerify(item, delayTime, fileName) {
 
                 item.result = 1;
 
-                // temp1, temp2 삭제
+                // temp 이미지 삭제
                 fs.unlinkSync(temp1Path);
                 fs.unlinkSync(temp2Path);
                 console.log("📂 temp 파일 삭제 완료");
@@ -144,10 +146,10 @@ async function govVerify(item, delayTime, fileName) {
     } finally {
         await browser.close();
 
-        // temp 파일 삭제
+        // 사람별 temp 폴더 삭제
         if (fs.existsSync(tempDir)) {
             fs.rmSync(tempDir, { recursive: true, force: true });
-            console.log("📂 temp 디렉토리 삭제 완료");
+            console.log(`📂 temp 디렉토리 삭제 완료: ${tempDir}`);
         }
     }
 }
