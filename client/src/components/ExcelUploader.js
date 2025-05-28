@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Box,
@@ -20,18 +20,98 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  Tooltip,
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { requestVerificationAndDownloadZip } from '../services/zipService';
 
+const validInstitutions = [
+  '한국세무사회',
+  '대한상공회의소',
+  '국사편찬위원회',
+  '한국생산성본부',
+  'OPIC',
+  '초본',
+  '성적증명서',
+  '졸업증명서',
+  '등본',
+  '어학성적 사전등록 확인서',
+  '건강보험자격득실확인서',
+  '국민연금가입자증명',
+];
+const normalizedValid = validInstitutions.map(inst => inst.replace(/\s/g, '').toLowerCase());
+
+const requiredColumns = [
+  'registerationNumber',
+  'name',
+  'institution',
+  'passNum',
+  'certificateName',
+  'birth',
+];
+
 const ExcelUploader = () => {
   const [headers, setHeaders] = useState([]);
   const [rows, setRows] = useState([]);
   const [editMode, setEditMode] = useState(false);
-
+  const [warnings, setWarnings] = useState([]);
+  const [rowErrors, setRowErrors] = useState({});
   const [openDialog, setOpenDialog] = useState(false);
   const [projectName, setProjectName] = useState('');
+
+  const validateData = useCallback((headerRow, rowData) => {
+    const newWarnings = [];
+    const newRowErrors = {};
+
+    // 필수 컬럼 검사 (원본 이름 기준)
+    const missing = requiredColumns.filter(col => !headerRow.includes(col));
+    if (missing.length > 0) {
+      newWarnings.push(
+        `❗ 필수 컬럼명이 포함되어있는지 확인하세요. 누락된 컬럼: ${missing.join(', ')}`
+      );
+    }
+
+    const loweredHeaders = headerRow.map(h => String(h).toLowerCase().trim());
+    const institutionIdx = loweredHeaders.indexOf('institution');
+    const birthIdx = loweredHeaders.indexOf('birth');
+
+    // 각 행 유효성 검사
+    rowData.forEach((row, idx) => {
+      const issues = [];
+      const instRaw = row[institutionIdx] || '';
+      const inst = instRaw.replace(/\s/g, '').toLowerCase();
+      const requiresBirth = ['국사편찬위원회', '한국생산성본부']
+        .map(x => x.replace(/\s/g, '').toLowerCase())
+        .includes(inst);
+
+      if (institutionIdx !== -1 && !normalizedValid.includes(inst)) {
+        issues.push('지원 불가능한 institution 값입니다.');
+      }
+      if (requiresBirth && !row[birthIdx]) {
+        issues.push('birth 값이 필요합니다.');
+      }
+
+      if (issues.length) {
+        newRowErrors[idx] = issues;
+      }
+    });
+
+    // 행별 오류를 경고 리스트에도 추가
+    Object.entries(newRowErrors).forEach(([idx, issues]) => {
+      newWarnings.push(`❗ ${Number(idx) + 1}행: ${issues.join(', ')}`);
+    });
+
+    setWarnings(newWarnings);
+    setRowErrors(newRowErrors);
+  }, []);
+
+  // headers, rows, editMode 변경 시 검증 수행
+  useEffect(() => {
+    if (headers.length > 0 && rows.length > 0) {
+      validateData(headers, rows);
+    }
+  }, [headers, rows, editMode, validateData]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
@@ -67,6 +147,12 @@ const ExcelUploader = () => {
     setRows(updated);
   };
 
+  const handleHeaderChange = (value, colIdx) => {
+    const updated = [...headers];
+    updated[colIdx] = value;
+    setHeaders(updated);
+  };
+
   const handleDeleteRow = (rowIdx) => {
     const updated = [...rows];
     updated.splice(rowIdx, 1);
@@ -85,6 +171,10 @@ const ExcelUploader = () => {
     }
     if (editMode) {
       alert('저장 후에 실행할 수 있습니다.');
+      return;
+    }
+    if (warnings.length > 0) {
+      alert('경고 메시지를 먼저 해결해주세요.');
       return;
     }
     setProjectName('');
@@ -140,60 +230,77 @@ const ExcelUploader = () => {
           </Typography>
         </Box>
 
+        {warnings.length > 0 && (
+          <Box sx={{ mb: 2, p: 2, backgroundColor: '#fff3cd', border: '1px solid #ffeeba', borderRadius: 2 }}>
+            <Typography variant="subtitle2" sx={{ color: '#856404' }}>⚠️ 경고</Typography>
+            <ul style={{ paddingLeft: '1rem', margin: 0 }}>
+              {warnings.map((w, i) => (
+                <li key={i} style={{ fontSize: '0.85rem' }}>{w}</li>
+              ))}
+            </ul>
+          </Box>
+        )}
+
         {rows.length > 0 && (
           <Box>
             <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-              <Button variant="outlined" onClick={() => setEditMode(true)} disabled={editMode}>
-                ✏️ 수정
-              </Button>
-              <Button variant="contained" onClick={() => setEditMode(false)} disabled={!editMode}>
-                💾 저장
-              </Button>
-              <Button variant="contained" color="success" onClick={handleVerifyButtonClick} disabled={editMode}>
-                📦 ZIP 다운로드
-              </Button>
-              {editMode && (
-                <Button variant="outlined" color="primary" onClick={handleAddRow}>
-                  ➕ 행 추가
-                </Button>
-              )}
+              <Button variant="outlined" onClick={() => setEditMode(true)} disabled={editMode}>✏️ 수정</Button>
+              <Button variant="contained" onClick={() => setEditMode(false)} disabled={!editMode}>💾 저장</Button>
+              <Button variant="contained" color="success" onClick={handleVerifyButtonClick} disabled={editMode || warnings.length > 0}>📦 진위조회 실행</Button>
+              {editMode && <Button variant="outlined" color="primary" onClick={handleAddRow}>➕ 행 추가</Button>}
             </Stack>
 
             <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
+                    <TableCell>행번호</TableCell>
                     {headers.map((header, idx) => (
-                      <TableCell key={idx}>{header}</TableCell>
+                      <TableCell key={idx}>
+                        {editMode ? (
+                          <TextField
+                            variant="standard"
+                            value={header}
+                            onChange={(e) => handleHeaderChange(e.target.value, idx)}
+                            fullWidth
+                          />
+                        ) : (
+                          header
+                        )}
+                      </TableCell>
                     ))}
-                    {editMode && <TableCell />} {/* 삭제용 빈 헤더 */}
+                    {editMode && <TableCell />}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {rows.map((row, rowIdx) => (
-                    <TableRow key={rowIdx}>
-                      {headers.map((_, colIdx) => (
-                        <TableCell key={colIdx}>
-                          {editMode ? (
-                            <TextField
-                              variant="standard"
-                              value={row[colIdx] || ''}
-                              onChange={(e) => handleCellChange(e.target.value, rowIdx, colIdx)}
-                              fullWidth
-                            />
-                          ) : (
-                            row[colIdx] !== undefined ? row[colIdx] : ''
-                          )}
-                        </TableCell>
-                      ))}
-                      {editMode && (
-                        <TableCell>
-                          <IconButton onClick={() => handleDeleteRow(rowIdx)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      )}
-                    </TableRow>
+                    <Tooltip key={rowIdx} title={rowErrors[rowIdx]?.join(', ') || ''} arrow placement="right">
+                      <TableRow sx={rowErrors[rowIdx] ? { backgroundColor: '#ffe6e6' } : {}}>
+                        <TableCell>{rowIdx + 1}</TableCell>
+                        {headers.map((_, colIdx) => (
+                          <TableCell key={colIdx}>
+                            {editMode ? (
+                              <TextField
+                                variant="standard"
+                                value={row[colIdx] || ''}
+                                onChange={(e) => handleCellChange(e.target.value, rowIdx, colIdx)}
+                                fullWidth
+                              />
+                            ) : (
+                              row[colIdx] || ''
+                            )}
+                          </TableCell>
+                        ))}
+                        {editMode && (
+                          <TableCell>
+                            <IconButton onClick={() => handleDeleteRow(rowIdx)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        )}
+
+                      </TableRow>
+                    </Tooltip>
                   ))}
                 </TableBody>
               </Table>
@@ -216,9 +323,7 @@ const ExcelUploader = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>취소</Button>
-          <Button variant="contained" onClick={handleConfirmDownload}>
-            ZIP 다운로드
-          </Button>
+          <Button variant="contained" onClick={handleConfirmDownload}>ZIP 다운로드</Button>
         </DialogActions>
       </Dialog>
     </Card>
