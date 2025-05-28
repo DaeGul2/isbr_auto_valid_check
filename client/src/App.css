@@ -36,3 +36,25 @@
     transform: rotate(360deg);
   }
 }
+/* 모든 마크다운 테이블에 격자점 적용 */
+.markdown-table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown-table th,
+.markdown-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  white-space: nowrap; /* 한 줄 유지 */
+}
+
+.markdown-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.markdown-table th {
+  background-color: #f1f1f1;
+  font-weight: bold;
+  text-align: center;
+}

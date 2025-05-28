@@ -1,5 +1,8 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import guideData from '../assets/guide.md.json';
 import {
   Box,
   Typography,
@@ -59,6 +62,8 @@ const ExcelUploader = () => {
   const [rowErrors, setRowErrors] = useState({});
   const [openDialog, setOpenDialog] = useState(false);
   const [projectName, setProjectName] = useState('');
+  const [openGuide, setOpenGuide] = useState(false);
+
 
   const validateData = useCallback((headerRow, rowData) => {
     const newWarnings = [];
@@ -75,6 +80,8 @@ const ExcelUploader = () => {
     const loweredHeaders = headerRow.map(h => String(h).toLowerCase().trim());
     const institutionIdx = loweredHeaders.indexOf('institution');
     const birthIdx = loweredHeaders.indexOf('birth');
+    const passNumIdx = loweredHeaders.indexOf('passnum');
+    const issuedDateIdx = loweredHeaders.indexOf('issueddate');
 
     // 각 행 유효성 검사
     rowData.forEach((row, idx) => {
@@ -91,6 +98,24 @@ const ExcelUploader = () => {
       if (requiresBirth && !row[birthIdx]) {
         issues.push('birth 값이 필요합니다.');
       }
+      if (inst === '국민연금가입자증명') {
+        const passNum = row[passNumIdx] || '';
+        const isGov24 = /^\d{4}-\d{4}-\d{4}-\d{4}$/.test(passNum);
+
+        // extraNum 존재해야 함
+        const extraNum = row[loweredHeaders.indexOf('extranum')] || '';
+        if (!extraNum) {
+          issues.push('extraNum(추가 기입 정보) 값이 필요합니다.');
+        }
+
+        if (!isGov24) {
+          const issuedDate = row[issuedDateIdx];
+          if (!issuedDate) {
+            issues.push('issuedDate(발급일) 값이 필요합니다.');
+          }
+        }
+      }
+
 
       if (issues.length) {
         newRowErrors[idx] = issues;
@@ -206,10 +231,25 @@ const ExcelUploader = () => {
 
   return (
     <Card variant="outlined">
+      <Button
+        variant="outlined"
+        component="a"
+        href="/sample-template.xlsx"
+        download
+        sx={{ mb: 2 }}
+      >
+        📥 양식 엑셀 파일 다운로드
+      </Button>
+
       <CardContent>
+        <IconButton onClick={() => setOpenGuide(true)}>
+          사용법을 모르시나요❓
+        </IconButton>
         <Typography variant="h6" gutterBottom>
           1️⃣ 엑셀 업로드 (드래그 앤 드롭 지원)
         </Typography>
+
+
 
         <Box
           {...getRootProps()}
@@ -282,12 +322,12 @@ const ExcelUploader = () => {
                             {editMode ? (
                               <TextField
                                 variant="standard"
-                                value={row[colIdx] || ''}
+                                value={row[colIdx] || ''}
                                 onChange={(e) => handleCellChange(e.target.value, rowIdx, colIdx)}
                                 fullWidth
                               />
                             ) : (
-                              row[colIdx] || ''
+                              row[colIdx] || ''
                             )}
                           </TableCell>
                         ))}
@@ -326,6 +366,48 @@ const ExcelUploader = () => {
           <Button variant="contained" onClick={handleConfirmDownload}>ZIP 다운로드</Button>
         </DialogActions>
       </Dialog>
+
+
+      <Dialog open={openGuide} onClose={() => setOpenGuide(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>📘 사용법 안내</DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            maxHeight: 600,
+            overflowY: 'auto',
+          }}
+        >
+          <Box
+            component="div"
+            sx={{
+              whiteSpace: 'pre-wrap',
+              overflowX: 'auto',
+              '& table': {
+                borderCollapse: 'collapse',
+                width: '100%',
+                marginBottom: 2,
+              },
+              '& th, & td': {
+                border: '1px solid #ccc',
+                padding: '8px',
+                textAlign: 'left',
+              },
+              '& th': {
+                backgroundColor: '#f5f5f5',
+              },
+            }}
+          >
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {guideData.content}
+            </ReactMarkdown>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenGuide(false)}>닫기</Button>
+        </DialogActions>
+      </Dialog>
+
+
     </Card>
   );
 };
