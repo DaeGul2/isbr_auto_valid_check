@@ -34,8 +34,8 @@ function writeExcel(data, outputFilePath) {
 
 // 실행
 (async () => {
-    const filePath = "./data/양식_초본.xlsx"; // 입력 엑셀 파일 경로
-    const outputFilePath = "./results/양식_초본_result.xlsx"; // 결과를 저장할 엑셀 파일 경로
+    const filePath = "./data/0528보산진_주원연구원/input.xlsx"; // 입력 엑셀 파일 경로
+    const outputFilePath = "./results/0528_보산진결과/보산진_result.xlsx"; // 결과를 저장할 엑셀 파일 경로
 
     // 데이터 읽기
     const globalExcelData = readExcel(filePath); // 전역적으로 관리될 엑셀 데이터
