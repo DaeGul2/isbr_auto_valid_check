@@ -3,7 +3,8 @@ import { saveAs } from "file-saver";
 import axios from "axios";
 import * as XLSX from "xlsx"; // ✅ 엑셀 생성용 추가
 
-const VERIFY_API_URL = "http://localhost:5050/api/verify";
+const VERIFY_API_URL = process.env.REACT_APP_VERIFY_API_URL;
+
 
 /**
  * 엑셀 데이터 배열을 서버에 보내고, 결과를 zip으로 다운로드
