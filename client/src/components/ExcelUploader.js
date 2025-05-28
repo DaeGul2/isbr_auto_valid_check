@@ -63,6 +63,8 @@ const ExcelUploader = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [openGuide, setOpenGuide] = useState(false);
+  const [userName, setUserName] = useState('');
+
 
 
   const validateData = useCallback((headerRow, rowData) => {
@@ -209,6 +211,7 @@ const ExcelUploader = () => {
   const handleConfirmDownload = () => {
     setOpenDialog(false);
     const name = projectName.trim() || '무제프로젝트';
+    const user = userName.trim() || '이름없음';
     const timestamp = getFormattedTimestamp();
     const zipName = `${name}_진위조회결과_${timestamp}.zip`;
 
@@ -220,7 +223,7 @@ const ExcelUploader = () => {
       return obj;
     });
 
-    requestVerificationAndDownloadZip(dataObjects, zipName);
+    requestVerificationAndDownloadZip(dataObjects, zipName, user);
   };
 
   const getFormattedTimestamp = () => {
@@ -359,6 +362,13 @@ const ExcelUploader = () => {
             fullWidth
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="사용자명"
+            fullWidth
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
           />
         </DialogContent>
         <DialogActions>

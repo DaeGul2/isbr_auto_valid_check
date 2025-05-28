@@ -10,9 +10,12 @@ const VERIFY_API_URL = "http://localhost:5050/api/verify";
  * @param {Array} inputItems - 엑셀에서 파싱한 각 행 객체들
  * @param {string} zipFileName - 저장될 zip 파일 이름
  */
-export async function requestVerificationAndDownloadZip(inputItems, zipFileName = "검증결과.zip") {
+export async function requestVerificationAndDownloadZip(inputItems, zipFileName = "검증결과.zip", userName = "사용자") {
   try {
-    const response = await axios.post(VERIFY_API_URL, inputItems);
+    const response = await axios.post(VERIFY_API_URL, {
+      items: inputItems,
+      user: userName
+    });
     const { data } = response.data;
 
     const zip = new JSZip();
