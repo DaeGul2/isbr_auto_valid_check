@@ -64,21 +64,20 @@ async function opicVerify(item, delayTime) {
         }
 
         // 확인 버튼 클릭
+        // (1) 확인 버튼 클릭
         await page.click("button.btn.md.secondary02");
         console.log("확인 버튼 클릭 완료");
 
-        // 결과 로드 대기
+        // (2) 결과 로드 대기
         await delay(delayTime);
 
-        // 페이지 전체 스크린샷 저장
-
+        // (3) 스크린샷 경로 및 zipPath 설정
         const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
         item.zipPath = `자격증/OPIc/${fileName}`;
-        const buffer = await page.screenshot({ encoding: 'base64' });
+        const buffer = await page.screenshot({ fullPage: true, encoding: 'base64' });
         item.imageBase64 = buffer;
 
-
-        // 결과 확인 및 처리
+        // (4) 결과 파싱
         const result = await page.evaluate(() => {
             const successRow = document.querySelector("tr");
             const failureMessage = document.querySelector("div.layerpopInbox .ltxt");
@@ -105,8 +104,24 @@ async function opicVerify(item, delayTime) {
             return {
                 isValid: false,
                 errorMessage: "결과를 찾을 수 없습니다.",
-            }; // 기본값
+            };
         });
+
+        // (5) 결과 처리
+        if (result?.isValid) {
+            const { 등급, 발급일 } = result.data;
+            item.subs = 등급;
+            item.date = 발급일;
+            item.result = 1;
+        } else {
+            item.subs = "";
+            item.date = "";
+            item.result = 0;
+            item.imageBase64 = null;
+            item.zipPath = null;
+            item.error = result.errorMessage;
+            console.log(`${item.name}, 진위 확인 실패: ${item.error}`);
+        }
 
         // 결과 처리
         if (result?.isValid) {

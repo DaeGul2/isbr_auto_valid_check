@@ -15,14 +15,23 @@ import {
   Button,
   TextField,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
-import { requestVerificationAndDownloadZip } from '../services/zipService'; // ✅ zipService 연결
+import DeleteIcon from '@mui/icons-material/Delete';
+import { requestVerificationAndDownloadZip } from '../services/zipService';
 
 const ExcelUploader = () => {
   const [headers, setHeaders] = useState([]);
   const [rows, setRows] = useState([]);
   const [editMode, setEditMode] = useState(false);
+
+  const [openDialog, setOpenDialog] = useState(false);
+  const [projectName, setProjectName] = useState('');
 
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
@@ -58,7 +67,18 @@ const ExcelUploader = () => {
     setRows(updated);
   };
 
-  const handleVerifyAndDownload = () => {
+  const handleDeleteRow = (rowIdx) => {
+    const updated = [...rows];
+    updated.splice(rowIdx, 1);
+    setRows(updated);
+  };
+
+  const handleAddRow = () => {
+    const emptyRow = headers.map(() => '');
+    setRows(prev => [...prev, emptyRow]);
+  };
+
+  const handleVerifyButtonClick = () => {
     if (!rows.length) {
       alert('엑셀 파일을 업로드하세요.');
       return;
@@ -67,8 +87,16 @@ const ExcelUploader = () => {
       alert('저장 후에 실행할 수 있습니다.');
       return;
     }
+    setProjectName('');
+    setOpenDialog(true);
+  };
 
-    // headers와 rows를 객체 배열로 변환
+  const handleConfirmDownload = () => {
+    setOpenDialog(false);
+    const name = projectName.trim() || '무제프로젝트';
+    const timestamp = getFormattedTimestamp();
+    const zipName = `${name}_진위조회결과_${timestamp}.zip`;
+
     const dataObjects = rows.map(row => {
       const obj = {};
       headers.forEach((header, idx) => {
@@ -77,7 +105,13 @@ const ExcelUploader = () => {
       return obj;
     });
 
-    requestVerificationAndDownloadZip(dataObjects, '진위검증결과.zip');
+    requestVerificationAndDownloadZip(dataObjects, zipName);
+  };
+
+  const getFormattedTimestamp = () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}`;
   };
 
   return (
@@ -109,28 +143,20 @@ const ExcelUploader = () => {
         {rows.length > 0 && (
           <Box>
             <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-              <Button
-                variant="outlined"
-                onClick={() => setEditMode(true)}
-                disabled={editMode}
-              >
+              <Button variant="outlined" onClick={() => setEditMode(true)} disabled={editMode}>
                 ✏️ 수정
               </Button>
-              <Button
-                variant="contained"
-                onClick={() => setEditMode(false)}
-                disabled={!editMode}
-              >
+              <Button variant="contained" onClick={() => setEditMode(false)} disabled={!editMode}>
                 💾 저장
               </Button>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={handleVerifyAndDownload}
-                disabled={editMode}
-              >
+              <Button variant="contained" color="success" onClick={handleVerifyButtonClick} disabled={editMode}>
                 📦 ZIP 다운로드
               </Button>
+              {editMode && (
+                <Button variant="outlined" color="primary" onClick={handleAddRow}>
+                  ➕ 행 추가
+                </Button>
+              )}
             </Stack>
 
             <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
@@ -140,6 +166,7 @@ const ExcelUploader = () => {
                     {headers.map((header, idx) => (
                       <TableCell key={idx}>{header}</TableCell>
                     ))}
+                    {editMode && <TableCell />} {/* 삭제용 빈 헤더 */}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -151,9 +178,7 @@ const ExcelUploader = () => {
                             <TextField
                               variant="standard"
                               value={row[colIdx] || ''}
-                              onChange={(e) =>
-                                handleCellChange(e.target.value, rowIdx, colIdx)
-                              }
+                              onChange={(e) => handleCellChange(e.target.value, rowIdx, colIdx)}
                               fullWidth
                             />
                           ) : (
@@ -161,6 +186,13 @@ const ExcelUploader = () => {
                           )}
                         </TableCell>
                       ))}
+                      {editMode && (
+                        <TableCell>
+                          <IconButton onClick={() => handleDeleteRow(rowIdx)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -169,6 +201,26 @@ const ExcelUploader = () => {
           </Box>
         )}
       </CardContent>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>📁 프로젝트명 입력</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="프로젝트명"
+            fullWidth
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>취소</Button>
+          <Button variant="contained" onClick={handleConfirmDownload}>
+            ZIP 다운로드
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };
