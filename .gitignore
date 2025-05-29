@@ -7,7 +7,3 @@
 *.xlsx
 *.xls
 
-# ✅ 이미지 파일 무시
-*.png
-*.jpg
-*.jpeg

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { saveAs } from "file-saver";
+import { sendBatchLog } from "./logService";
 
 const VERIFY_API_URL = process.env.REACT_APP_VERIFY_API_URL;
 const ZIP_API_URL    = process.env.REACT_APP_ZIP_API_URL;

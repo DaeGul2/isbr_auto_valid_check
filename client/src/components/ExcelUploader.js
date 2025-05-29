@@ -30,6 +30,7 @@ import {
 import { useDropzone } from 'react-dropzone';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { verifyInChunks, requestZipDownload } from '../services/zipService';
+import { sendBatchLog } from '../services/logService'; // 로그 전송 함수
 
 const validInstitutions = [
   '한국세무사회',
@@ -231,56 +232,73 @@ const ExcelUploader = () => {
     setOpenDialog(true);
   };
 
-  const handleConfirmAndStartVerify = async () => {
-    setOpenDialog(false);
-    const name = projectName.trim() || '무제프로젝트';
-    const user = userName.trim() || '이름없음';
-    const timestamp = getFormattedTimestamp();
-    const zipName = `${name}_진위조회결과_${timestamp}.zip`;
+ const handleConfirmAndStartVerify = async () => {
+  setOpenDialog(false);
 
-    const dataObjects = checkedIndices.map(index => {
-      const row = rows[index];
-      const obj = {};
-      headers.forEach((header, idx) => {
-        obj[header] = row[idx];
-      });
-      obj._index = index;
-      return obj;
+  // 1️⃣ 프로젝트명, 사용자명, timestamp, zipName 생성
+  const name = projectName.trim() || '무제프로젝트';
+  const user = userName.trim() || '이름없음';
+  const timestamp = getFormattedTimestamp();
+  const zipName = `${name}_진위조회결과_${timestamp}.zip`;
+
+  // 2️⃣ 체크된 행을 dataObjects 배열로 변환
+  const dataObjects = checkedIndices.map(index => {
+    const row = rows[index];
+    const obj = {};
+    headers.forEach((header, idx) => {
+      obj[header] = row[idx];
     });
+    obj._index = index;  // UI 업데이트용 인덱스
+    return obj;
+  });
 
-    // ✅ 1. 처리중 상태 먼저 반영
-    setRows(prev => {
-      const updated = [...prev];
-      dataObjects.forEach(obj => {
-        updated[obj._index].__status = "⏳ 처리중";
-      });
-      return updated;
+  // 3️⃣ 처리중 상태 먼저 반영
+  setRows(prev => {
+    const updated = [...prev];
+    dataObjects.forEach(obj => {
+      updated[obj._index].__status = "⏳ 처리중";
     });
+    return updated;
+  });
 
-    
-    
-
-    // ② 마지막 인자로 zipName 넘기기
-    await verifyInChunks(
-      dataObjects,
-      user,
-      3,
-      (responses) => {
-        setRows(prev => {
-          const updated = [...prev];
-          responses.forEach(r => {
-            updated[r._index].__status = r.result === 1 ? "✅ 성공" : "❌ 실패";
-          });
-          return updated;
+  // 4️⃣ 3개 단위 병렬 검증 수행, zipName 전달
+  const allResults = [];
+  await verifyInChunks(
+    dataObjects,
+    user,
+    3,
+    (responses) => {
+      setRows(prev => {
+        const updated = [...prev];
+        responses.forEach(r => {
+          updated[r._index].__status = r.result === 1 ? "✅ 성공" : "❌ 실패";
         });
-      },
-      zipName   // ← 추가
-    );
+        return updated;
+      });
+      allResults.push(...responses);
+    },
+    zipName
+  );
 
+  // 5️⃣ 검증 결과 메트릭 집계
+  const peopleCount       = allResults.length;
+  const institutionCount  = allResults.reduce((acc, r) => {
+    acc[r.institution] = (acc[r.institution] || 0) + 1;
+    return acc;
+  }, {});
+  const status            = allResults.some(r => r.result === 0) ? 0 : 1;
 
-    // ✅ 3. ZIP 다운로드 요청
-    await requestZipDownload(zipName);
-  };
+  // 6️⃣ 클라이언트에서 한 번만 로그 전송
+  await sendBatchLog({
+    userName:         user,
+    peopleCount,
+    institutionCount,
+    status,
+  });
+
+  // 7️⃣ 최종 ZIP 다운로드 요청
+  await requestZipDownload(zipName);
+};
 
 
 

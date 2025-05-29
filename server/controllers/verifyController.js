@@ -49,23 +49,7 @@ exports.verifyCertificate = async (req, res) => {
     }
 
     // ✅ 로그 전송
-    try {
-      const { sendLog } = await import('isbr_util');
-      await sendLog({
-        appName: "진위조회",
-        functionName: "verifyCertification",
-        userName: user || "이름없음",
-        extra: {
-          people_count: inputArray.length,
-          institution_count: institutionCounter,
-          status: hasError ? 0 : 1,
-        },
-      });
-      console.log("✅ 로그 전송 완료");
-    } catch (logErr) {
-      console.error("❌ 로그 전송 실패:", logErr);
-    }
-
+    
     return res.json({ success: true, data: results });
   } catch (error) {
     console.error('❌ 전체 검증 오류:', error);
