@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const cheerio = require("cheerio");  // ✅ 추가: cheerio 불러오기
-
+const { launchBrowser } = require("../utils/puppeteerHelper");
 
 // 딜레이 함수
 function delay(ms) {
@@ -12,12 +12,7 @@ function delay(ms) {
 // 보험 자격득실 확인 함수
 async function insuranceNhis(item, delayTime) {
     const url = "https://www.nhis.or.kr/nhis/minwon/jpAeb00101.do";
-    const browser = await puppeteer.launch({
-        headless: false,
-        args: ["--start-maximized"],
-        defaultViewport: null,
-    });
-    const page = await browser.newPage();
+    const { browser, page } = await launchBrowser();
 
     try {
         // (1) 페이지 열기

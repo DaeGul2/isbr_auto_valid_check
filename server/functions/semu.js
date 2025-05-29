@@ -3,7 +3,7 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-
+const { launchBrowser } = require("../utils/puppeteerHelper");
 // Puppeteer Stealth 플러그인 활성화
 puppeteer.use(StealthPlugin());
 
@@ -94,18 +94,9 @@ async function closePopupIfPresent(page) {
 async function semuVerify(item, delayTime, directoryName) {
     // 스크린샷 저장 디렉토리 설정
 
+    const { browser, page } = await launchBrowser();
 
-
-    const browser = await puppeteer.launch({
-        headless: false,
-        args: [
-            "--start-maximized", // 창 최대화
-            "--disable-blink-features=AutomationControlled", // 자동화 감지 방지
-        ],
-        defaultViewport: null,
-    });
-
-    const page = await browser.newPage();
+   
 
     // `navigator.webdriver` 감추기
     await page.evaluateOnNewDocument(() => {

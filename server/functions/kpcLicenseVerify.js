@@ -3,7 +3,7 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-
+const { launchBrowser } = require("../utils/puppeteerHelper");
 
 
 // Puppeteer Stealth 플러그인 활성화
@@ -43,16 +43,7 @@ function delay(ms) {
 async function kpcLicenseVerify(item, delayTime, directoryName) {
     // 스크린샷 디렉토리 생성
 
-    const browser = await puppeteer.launch({
-        headless: false, // 브라우저 표시
-        args: [
-            "--start-maximized", // 창 최대화
-            "--disable-blink-features=AutomationControlled", // 자동화 감지 방지
-        ],
-        defaultViewport: null, // 기본 뷰포트 비활성화
-    });
-
-    const page = await browser.newPage();
+    const { browser, page } = await launchBrowser();
 
     // `navigator.webdriver` 감추기
     await page.evaluateOnNewDocument(() => {

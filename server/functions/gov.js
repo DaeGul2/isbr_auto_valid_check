@@ -2,6 +2,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp"); // 이미지 결합용 라이브러리
+const { launchBrowser } = require("../utils/puppeteerHelper");
 
 // 딜레이 함수
 function delay(ms) {
@@ -11,6 +12,7 @@ function delay(ms) {
 // 통합 함수
 async function govVerify(item, delayTime, fileName) {
 
+    const { browser, page } = await launchBrowser();
 
     // ✅ 사람별 temp 폴더 생성
     const tempDir = `./images/temp/${item.registerationNumber}`;
@@ -19,13 +21,7 @@ async function govVerify(item, delayTime, fileName) {
     }
 
     const url = "https://www.gov.kr/mw/EgovPageLink.do?link=confirm/AA040_confirm_id";
-    const browser = await puppeteer.launch({
-        headless: false,
-        args: ["--start-maximized"],
-        defaultViewport: null,
-    });
-    const page = await browser.newPage();
-
+    
     try {
         await page.goto(url, { waitUntil: "networkidle2" });
 
@@ -93,7 +89,7 @@ async function govVerify(item, delayTime, fileName) {
                 await newPage.screenshot({ path: temp2Path });
                 console.log(`📸 temp2 스크린샷 저장 완료: ${temp2Path}`);
 
-              
+
                 // 이미지 병합
                 const temp1Meta = await sharp(temp1Path).metadata();
                 const temp2Meta = await sharp(temp2Path).metadata();
@@ -122,7 +118,7 @@ async function govVerify(item, delayTime, fileName) {
                 item.imageBase64 = imageBuffer.toString("base64");
 
 
-                
+
 
                 item.result = 1;
 

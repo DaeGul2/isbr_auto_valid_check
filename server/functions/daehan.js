@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-
+const { launchBrowser } = require("../utils/puppeteerHelper");
 
 
 // 지정된 시간만큼 딜레이를 추가하는 함수
@@ -13,19 +13,9 @@ function delay(ms) {
 // 대한상공회의소 진위 조회 함수
 async function daehanLoginAndVerify(item, delayTime, directoryName) {
     // 스크린샷 디렉토리 생성
+    const { browser, page } = await launchBrowser();
 
-    const browser = await puppeteer.launch({
-        headless: false, // 브라우저 표시
-        args: ["--start-maximized"], // 창 최대화
-        defaultViewport: null, // 기본 뷰포트 비활성화
-    });
-
-    const page = await browser.newPage();
-
-    // User-Agent 설정
-    await page.setUserAgent(
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    );
+  
 
     // 로그인 페이지 이동
     const loginUrl = "https://license.korcham.net/mb/grplogin.do";
@@ -92,7 +82,7 @@ async function daehanLoginAndVerify(item, delayTime, directoryName) {
             const buffer = await page.screenshot({ encoding: "base64" });
             item.imageBase64 = buffer;
 
-            
+
 
             console.log(`${item.name}, 합격 여부 : 합격\n종목명 : ${subject}\n합격일 : ${date}`);
         } else {

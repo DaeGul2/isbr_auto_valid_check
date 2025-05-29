@@ -2,6 +2,7 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require("./utils");
+const { launchBrowser } = require("../utils/puppeteerHelper");
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,13 +27,7 @@ function parseIssuedDate(date) {
 
 async function npsVerify(item, delayTime) {
   const url = "https://nps.or.kr/elctcvlcpt/etc/getOHAC0065M0.do";
-  const browser = await puppeteer.launch({
-    headless: false,
-    args: ["--start-maximized"],
-    defaultViewport: null,
-  });
-  const page = await browser.newPage();
-
+  const { browser, page } = await launchBrowser();
   try {
     await page.goto(url, { waitUntil: "networkidle2" });
     console.log("✅ 국민연금 진위확인 페이지 접속 완료");
