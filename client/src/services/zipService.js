@@ -1,58 +1,62 @@
-import JSZip from "jszip";
-import { saveAs } from "file-saver";
 import axios from "axios";
-import * as XLSX from "xlsx"; // ✅ 엑셀 생성용 추가
+import { saveAs } from "file-saver";
 
 const VERIFY_API_URL = process.env.REACT_APP_VERIFY_API_URL;
-
+const ZIP_API_URL    = process.env.REACT_APP_ZIP_API_URL;
 
 /**
- * 엑셀 데이터 배열을 서버에 보내고, 결과를 zip으로 다운로드
- * @param {Array} inputItems - 엑셀에서 파싱한 각 행 객체들
- * @param {string} zipFileName - 저장될 zip 파일 이름
+ * 3개 단위 병렬 요청 처리 및 상태 리턴
+ * @param zipName  서버에 결과 누적할 때 사용할 key
  */
-export async function requestVerificationAndDownloadZip(inputItems, zipFileName = "검증결과.zip", userName = "사용자") {
+export async function verifyInChunks(
+  dataObjects,
+  user,
+  chunkSize = 3,
+  onResult,
+  zipName   // ← zipName 파라미터 추가
+) {
+  for (let i = 0; i < dataObjects.length; i += chunkSize) {
+    const chunk = dataObjects.slice(i, i + chunkSize);
+
+    const responses = await Promise.all(
+      chunk.map(item =>
+        axios
+          .post(VERIFY_API_URL, {
+            items:  [item],
+            user,
+            zipName,   // ← 여기 포함
+          })
+          .then(res => {
+            const r = res.data.data[0];
+            r._index = item._index; // index 보존
+            return r;
+          })
+          .catch(err => ({
+            ...item,
+            result: 0,
+            error: err.message || '요청 실패',
+          }))
+      )
+    );
+
+    if (onResult) onResult(responses);
+  }
+}
+
+/**
+ * 서버에 zip 파일 생성 요청하고 다운로드
+ */
+export async function requestZipDownload(zipName) {
   try {
-    const response = await axios.post(VERIFY_API_URL, {
-      items: inputItems,
-      user: userName
-    });
-    const { data } = response.data;
-
-    const zip = new JSZip();
-
-    // ✅ 1. 이미지 추가
-    for (const item of data) {
-      if (item.result === 1 && item.imageBase64 && item.zipPath) {
-        zip.file(item.zipPath, item.imageBase64, { base64: true });
-      }
-    }
-
-    // ✅ 2. 결과요약.xlsx 생성 (기존 certificate.js 구조 그대로)
-    const excelData = data.map(item => ({
-      name: item.name || "",
-      registerationNumber: item.registerationNumber || "",
-      certificateName: item.certificateName || "",
-      institution: item.institution || "",
-      result: item.result,
-      date: item.date || "",
-      subs: item.subs || "",
-      error: item.error || "",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "진위결과");
-
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-
-    zip.file("결과요약.xlsx", excelBuffer);
-
-    // ✅ 3. zip 다운로드
-    const blob = await zip.generateAsync({ type: "blob" });
-    saveAs(blob, zipFileName);
-  } catch (error) {
-    console.error("❌ zip 생성 중 오류 발생:", error);
-    alert("ZIP 파일 생성에 실패했습니다.");
+    const res = await axios.post(
+      ZIP_API_URL,
+      { zipName },
+      { responseType: "blob" }
+    );
+    const blob = new Blob([res.data], { type: "application/zip" });
+    saveAs(blob, zipName);
+  } catch (err) {
+    console.error("ZIP 다운로드 실패:", err);
+    alert("ZIP 파일 생성 중 오류 발생");
   }
 }

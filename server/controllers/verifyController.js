@@ -1,8 +1,9 @@
 const { handleVerification } = require('../services/verifyService');
+const { createZipFromResults, saveVerificationResults } = require('../services/zipService');
 
 exports.verifyCertificate = async (req, res) => {
   try {
-    const { items: inputArray, user } = req.body;
+    const { items: inputArray, user, zipName } = req.body;
 
     if (!Array.isArray(inputArray)) {
       return res.status(400).json({ success: false, error: 'items는 배열이어야 합니다.' });
@@ -42,6 +43,11 @@ exports.verifyCertificate = async (req, res) => {
       }
     }
 
+    // ✅ 결과 저장
+    if (zipName) {
+      saveVerificationResults(zipName, results);
+    }
+
     // ✅ 로그 전송
     try {
       const { sendLog } = await import('isbr_util');
@@ -60,9 +66,29 @@ exports.verifyCertificate = async (req, res) => {
       console.error("❌ 로그 전송 실패:", logErr);
     }
 
-    res.json({ success: true, data: results });
+    return res.json({ success: true, data: results });
   } catch (error) {
     console.error('❌ 전체 검증 오류:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+exports.makeZip = async (req, res) => {
+  try {
+    const { zipName } = req.body;
+
+    if (!zipName) {
+      return res.status(400).json({ success: false, error: 'zipName 누락됨' });
+    }
+
+    const zipBuffer = await createZipFromResults(zipName);
+
+    // ZIP 다운로드 헤더 설정: Express res.attachment() 사용
+    res.setHeader('Content-Type', 'application/zip');
+    res.attachment(zipName);
+    res.send(zipBuffer);
+  } catch (err) {
+    console.error('❌ ZIP 생성 오류:', err);
+    return res.status(500).json({ success: false, error: 'ZIP 생성 실패' });
   }
 };

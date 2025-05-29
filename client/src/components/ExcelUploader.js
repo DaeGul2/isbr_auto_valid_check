@@ -24,11 +24,12 @@ import {
   DialogActions,
   IconButton,
   Tooltip,
-  Checkbox
+  Checkbox,
+  CircularProgress
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { requestVerificationAndDownloadZip } from '../services/zipService';
+import { verifyInChunks, requestZipDownload } from '../services/zipService';
 
 const validInstitutions = [
   '한국세무사회',
@@ -230,7 +231,7 @@ const ExcelUploader = () => {
     setOpenDialog(true);
   };
 
-  const handleConfirmDownload = () => {
+  const handleConfirmAndStartVerify = async () => {
     setOpenDialog(false);
     const name = projectName.trim() || '무제프로젝트';
     const user = userName.trim() || '이름없음';
@@ -243,12 +244,45 @@ const ExcelUploader = () => {
       headers.forEach((header, idx) => {
         obj[header] = row[idx];
       });
+      obj._index = index;
       return obj;
     });
 
+    // ✅ 1. 처리중 상태 먼저 반영
+    setRows(prev => {
+      const updated = [...prev];
+      dataObjects.forEach(obj => {
+        updated[obj._index].__status = "⏳ 처리중";
+      });
+      return updated;
+    });
 
-    requestVerificationAndDownloadZip(dataObjects, zipName, user);
+    
+    
+
+    // ② 마지막 인자로 zipName 넘기기
+    await verifyInChunks(
+      dataObjects,
+      user,
+      3,
+      (responses) => {
+        setRows(prev => {
+          const updated = [...prev];
+          responses.forEach(r => {
+            updated[r._index].__status = r.result === 1 ? "✅ 성공" : "❌ 실패";
+          });
+          return updated;
+        });
+      },
+      zipName   // ← 추가
+    );
+
+
+    // ✅ 3. ZIP 다운로드 요청
+    await requestZipDownload(zipName);
   };
+
+
 
   const getFormattedTimestamp = () => {
     const now = new Date();
@@ -346,13 +380,21 @@ const ExcelUploader = () => {
                         )}
                       </TableCell>
                     ))}
-                    {editMode && <TableCell />}
+                    <TableCell>결과</TableCell> {/* ✅ 결과 컬럼 */}
+                    {editMode && <TableCell />} {/* 삭제 버튼 */}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {rows.map((row, rowIdx) => (
-                    <Tooltip key={rowIdx} title={rowErrors[rowIdx]?.join(', ') || ''} arrow placement="right">
-                      <TableRow sx={rowErrors[rowIdx] ? { backgroundColor: '#ffe6e6' } : {}}>
+                    <Tooltip
+                      key={rowIdx}
+                      title={rowErrors[rowIdx]?.join(', ') || ''}
+                      arrow
+                      placement="right"
+                    >
+                      <TableRow
+                        sx={rowErrors[rowIdx] ? { backgroundColor: '#ffe6e6' } : {}}
+                      >
                         <TableCell padding="checkbox">
                           <Checkbox
                             checked={checkedIndices.includes(rowIdx)}
@@ -366,7 +408,9 @@ const ExcelUploader = () => {
                               <TextField
                                 variant="standard"
                                 value={row[colIdx] || ''}
-                                onChange={(e) => handleCellChange(e.target.value, rowIdx, colIdx)}
+                                onChange={(e) =>
+                                  handleCellChange(e.target.value, rowIdx, colIdx)
+                                }
                                 fullWidth
                               />
                             ) : (
@@ -374,6 +418,19 @@ const ExcelUploader = () => {
                             )}
                           </TableCell>
                         ))}
+                        {/* ✅ 처리중이면 로딩 아이콘, 아니면 상태 텍스트 */}
+                        <TableCell>
+                          {row.__status === "⏳ 처리중" ? (
+                            <Box display="flex" alignItems="center">
+                              <CircularProgress size={18} />
+                              <Typography variant="body2" sx={{ ml: 1 }}>처리중</Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2">
+                              {row.__status || '-'}
+                            </Typography>
+                          )}
+                        </TableCell>
                         {editMode && (
                           <TableCell>
                             <IconButton onClick={() => handleDeleteRow(rowIdx)}>
@@ -387,6 +444,7 @@ const ExcelUploader = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+
 
           </Box>
         )}
@@ -413,7 +471,8 @@ const ExcelUploader = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>취소</Button>
-          <Button variant="contained" onClick={handleConfirmDownload}>ZIP 다운로드</Button>
+          <Button variant="contained" onClick={handleConfirmAndStartVerify}>
+            ZIP 다운로드</Button>
         </DialogActions>
       </Dialog>
 

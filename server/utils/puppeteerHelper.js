@@ -10,7 +10,7 @@ puppeteer.use(StealthPlugin());
  */
 async function launchBrowser() {
   const browser = await puppeteer.launch({
-    headless: false, // 필요 시 "new" 또는 true 로 변경 가능
+    headless: true, // 필요 시 "new" 또는 true 로 변경 가능
     args: [
       "--start-maximized",
       "--disable-blink-features=AutomationControlled",
