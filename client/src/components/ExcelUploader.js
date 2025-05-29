@@ -24,6 +24,7 @@ import {
   DialogActions,
   IconButton,
   Tooltip,
+  Checkbox
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -64,6 +65,9 @@ const ExcelUploader = () => {
   const [projectName, setProjectName] = useState('');
   const [openGuide, setOpenGuide] = useState(false);
   const [userName, setUserName] = useState('');
+
+  const [checkedIndices, setCheckedIndices] = useState([]);
+
 
 
 
@@ -136,9 +140,10 @@ const ExcelUploader = () => {
   // headers, rows, editMode 변경 시 검증 수행
   useEffect(() => {
     if (headers.length > 0 && rows.length > 0) {
-      validateData(headers, rows);
+      const selectedRows = checkedIndices.map(i => rows[i]);
+      validateData(headers, selectedRows);
     }
-  }, [headers, rows, editMode, validateData]);
+  }, [headers, rows, checkedIndices, editMode, validateData]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
@@ -167,6 +172,23 @@ const ExcelUploader = () => {
       'application/vnd.ms-excel': ['.xls'],
     },
   });
+
+  const toggleCheckRow = (index) => {
+    setCheckedIndices(prev =>
+      prev.includes(index)
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const checkAll = () => {
+    setCheckedIndices(rows.map((_, idx) => idx));
+  };
+
+  const uncheckAll = () => {
+    setCheckedIndices([]);
+  };
+
 
   const handleCellChange = (value, rowIdx, colIdx) => {
     const updated = [...rows];
@@ -215,13 +237,15 @@ const ExcelUploader = () => {
     const timestamp = getFormattedTimestamp();
     const zipName = `${name}_진위조회결과_${timestamp}.zip`;
 
-    const dataObjects = rows.map(row => {
+    const dataObjects = checkedIndices.map(index => {
+      const row = rows[index];
       const obj = {};
       headers.forEach((header, idx) => {
         obj[header] = row[idx];
       });
       return obj;
     });
+
 
     requestVerificationAndDownloadZip(dataObjects, zipName, user);
   };
@@ -289,7 +313,16 @@ const ExcelUploader = () => {
             <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
               <Button variant="outlined" onClick={() => setEditMode(true)} disabled={editMode}>✏️ 수정</Button>
               <Button variant="contained" onClick={() => setEditMode(false)} disabled={!editMode}>💾 저장</Button>
-              <Button variant="contained" color="success" onClick={handleVerifyButtonClick} disabled={editMode || warnings.length > 0}>📦 진위조회 실행</Button>
+              <Button
+                variant="contained"
+                color="success"
+                onClick={handleVerifyButtonClick}
+                disabled={editMode || warnings.length > 0 || checkedIndices.length === 0}
+              >
+                📦 진위조회 실행
+              </Button>
+              <Button variant="outlined" onClick={checkAll}>✅ 전체 선택</Button>
+              <Button variant="outlined" onClick={uncheckAll}>🚫 전체 해제</Button>
               {editMode && <Button variant="outlined" color="primary" onClick={handleAddRow}>➕ 행 추가</Button>}
             </Stack>
 
@@ -297,6 +330,7 @@ const ExcelUploader = () => {
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">✔</TableCell>
                     <TableCell>행번호</TableCell>
                     {headers.map((header, idx) => (
                       <TableCell key={idx}>
@@ -317,8 +351,14 @@ const ExcelUploader = () => {
                 </TableHead>
                 <TableBody>
                   {rows.map((row, rowIdx) => (
-                    <Tooltip key={rowIdx} title={rowErrors[rowIdx]?.join(', ') || ''} arrow placement="right">
+                    <Tooltip key={rowIdx} title={rowErrors[rowIdx]?.join(', ') || ''} arrow placement="right">
                       <TableRow sx={rowErrors[rowIdx] ? { backgroundColor: '#ffe6e6' } : {}}>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={checkedIndices.includes(rowIdx)}
+                            onChange={() => toggleCheckRow(rowIdx)}
+                          />
+                        </TableCell>
                         <TableCell>{rowIdx + 1}</TableCell>
                         {headers.map((_, colIdx) => (
                           <TableCell key={colIdx}>
@@ -341,13 +381,13 @@ const ExcelUploader = () => {
                             </IconButton>
                           </TableCell>
                         )}
-
                       </TableRow>
                     </Tooltip>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
+
           </Box>
         )}
       </CardContent>
