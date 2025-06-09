@@ -59,22 +59,28 @@ async function govVerify(item, delayTime, fileName) {
         console.log(`📸 temp1 저장: ${temp1Path}`);
 
         // ⑨ 문서확인 버튼 클릭
+        // ⑩ 문서확인 버튼 클릭 → 새 탭 열림 대기
         const viewButton = await page.waitForSelector('a[onclick*="view_doc"]', { timeout: 10000 });
         await viewButton.click();
 
-        // ⑩ 새 탭 열림 + iframe 내부까지 완전 로딩 대기
+        // 새 탭 열릴 시간 대기
         await new Promise(resolve => setTimeout(resolve, 3000));
         const pages = await browser.pages();
         const newPage = pages[pages.length - 1];
         await newPage.waitForFunction(() => document.readyState === 'complete', { timeout: 20000 });
 
-        // iframe 내부 document 로딩 확인
+        // ✅ iframe 접근 및 내부 로딩 완료 대기
         await newPage.waitForSelector('#viewerFrame', { timeout: 20000 });
         const frameHandle = await newPage.$('#viewerFrame');
         const frame = await frameHandle.contentFrame();
-        await frame.waitForFunction(() => document.readyState === 'complete', { timeout: 20000 });
 
+        // iframe 내부의 실제 PDF 렌더링 요소 기다리기
+        await frame.waitForSelector('.page', { timeout: 15000 });
+        await frame.waitForSelector('.textLayer', { timeout: 15000 });
 
+        // ✅ iframe 내부 HTML 저장 (디버깅용)
+        const content = await frame.content();
+        fs.writeFileSync(`./iframe_debug_${item.registerationNumber}.txt`, content, { encoding: 'utf-8' });
 
         // ⑪ temp2 스크린샷
         const temp2Path = path.join(tempDir, "temp2.png");
