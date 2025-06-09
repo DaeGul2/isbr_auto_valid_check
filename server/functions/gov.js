@@ -62,11 +62,19 @@ async function govVerify(item, delayTime, fileName) {
         const viewButton = await page.waitForSelector('a[onclick*="view_doc"]', { timeout: 10000 });
         await viewButton.click();
 
-        // ⑩ 새 탭 렌더 완료 대기
-        await new Promise(resolve => setTimeout(resolve, 3000)); // 새 창 열리는 여유
+        // ⑩ 새 탭 열림 + iframe 내부까지 완전 로딩 대기
+        await new Promise(resolve => setTimeout(resolve, 3000));
         const pages = await browser.pages();
         const newPage = pages[pages.length - 1];
-        await newPage.waitForFunction(() => document.readyState === 'complete', { timeout: 10000 });
+        await newPage.waitForFunction(() => document.readyState === 'complete', { timeout: 20000 });
+
+        // iframe 내부 document 로딩 확인
+        await newPage.waitForSelector('#viewerFrame', { timeout: 20000 });
+        const frameHandle = await newPage.$('#viewerFrame');
+        const frame = await frameHandle.contentFrame();
+        await frame.waitForFunction(() => document.readyState === 'complete', { timeout: 20000 });
+
+
 
         // ⑪ temp2 스크린샷
         const temp2Path = path.join(tempDir, "temp2.png");
