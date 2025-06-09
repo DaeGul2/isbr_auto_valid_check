@@ -76,7 +76,7 @@ async function daehanLoginAndVerify(item, delayTime, directoryName) {
             item.result = 1;
             // 결과 스크린샷 저장
             // const resultScreenshotPath = path.join(screenshotDir, `${item.name}_${item.certificateName}_result.png`);
-            const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
+            const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
             item.zipPath = `자격증/${directoryName}/${fileName}`;
 
             const buffer = await page.screenshot({ encoding: "base64" });

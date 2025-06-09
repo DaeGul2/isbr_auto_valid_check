@@ -132,7 +132,7 @@ async function hanguksaVerify(item, delayTime, directoryName) {
             item.subs = `한국사능력검정시험${등급}`; // 등급 및 합격여부 저장
             // 결과 스크린샷 저장
             // const resultScreenshotPath = path.join(screenshotDir, `${item.name}_한국사_result.png`);
-            const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
+            const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
             item.zipPath = `자격증/${directoryName}/${fileName}`;
             const buffer = await page.screenshot({ encoding: "base64" });
             item.imageBase64 = buffer;

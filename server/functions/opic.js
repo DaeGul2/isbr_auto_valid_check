@@ -64,7 +64,7 @@ async function opicVerify(item, delayTime) {
         await delay(delayTime);
 
         // (3) 스크린샷 경로 및 zipPath 설정
-        const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
+        const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
         item.zipPath = `자격증/OPIc/${fileName}`;
         const buffer = await page.screenshot({ fullPage: true, encoding: 'base64' });
         item.imageBase64 = buffer;

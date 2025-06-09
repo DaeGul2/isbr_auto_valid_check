@@ -124,7 +124,7 @@ async function kpcLicenseVerify(item, delayTime, directoryName) {
             item.subs = 자격종목; // 자격종목 저장
             item.result = 1; // 성공
             // 스크린샷 저장
-            const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
+            const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
             item.zipPath = `자격증/${directoryName}/${fileName}`;
             const buffer = await page.screenshot({ encoding: 'base64' });
             item.imageBase64 = buffer;

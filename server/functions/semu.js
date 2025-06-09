@@ -193,7 +193,7 @@ async function semuVerify(item, delayTime, directoryName) {
             item.result = 1;
             // 페이지 전체 스크린샷 저장
             // const resultScreenshotPath = path.join(screenshotDir,`${item.name}_semu_full_result.png`);
-            const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
+            const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
             item.zipPath = `자격증/한국세무사회/${fileName}`;
             const buffer = await page.screenshot({ encoding: "base64" });
             item.imageBase64 = buffer;

@@ -89,7 +89,7 @@ async function insuranceNhis(item, delayTime) {
         // (9) 결과 처리 및 스크린샷 저장
         if (parsedModalMessage.includes("발급받은 이력이 있습니다")) {
             item.result = 1;
-            const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
+            const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
             item.zipPath = `건강보험자격득실확인서/${fileName}`;
             const buffer = await page.screenshot({ encoding: 'base64' });
             item.imageBase64 = buffer;

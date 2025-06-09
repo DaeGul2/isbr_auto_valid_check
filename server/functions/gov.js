@@ -1,156 +1,118 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
-const sharp = require("sharp"); // 이미지 결합용 라이브러리
+const sharp = require("sharp");
 const { launchBrowser } = require("../utils/puppeteerHelper");
 
-// 딜레이 함수
-function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// 통합 함수
 async function govVerify(item, delayTime, fileName) {
-
     const { browser, page } = await launchBrowser();
-
-    // ✅ 사람별 temp 폴더 생성
     const tempDir = `./images/temp/${item.registerationNumber}`;
     if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
     }
 
     const url = "https://www.gov.kr/mw/EgovPageLink.do?link=confirm/AA040_confirm_id";
-    
+
     try {
+        // ① 페이지 접속 및 option_box 대기
         await page.goto(url, { waitUntil: "networkidle2" });
+        await page.waitForSelector('.option_box', { timeout: 10000 });
 
-        // (1) 라디오 버튼 확인 및 체크
+        // ② 라디오 버튼 선택
         const radioSelector = "#issue_type1";
-        const isChecked = await page.$eval(radioSelector, (el) => el.checked);
-        if (!isChecked) {
-            await page.click(radioSelector);
-            console.log("라디오 버튼 체크 완료");
-        }
+        const isChecked = await page.$eval(radioSelector, el => el.checked);
+        if (!isChecked) await page.click(radioSelector);
 
-        // (2) passNum 파싱 및 입력
-        const passParts = item.passNum.split("-").map((part) => part.replace(/^0+/, "0"));
-        if (passParts.length !== 4) {
-            throw new Error(`Invalid passNum format: ${item.passNum}`);
-        }
+        // ③ 문서확인번호 입력
+        const passParts = item.passNum.split("-").map(p => p.replace(/^0+/, "0"));
+        if (passParts.length !== 4) throw new Error(`Invalid passNum format: ${item.passNum}`);
         for (let i = 0; i < 4; i++) {
             await page.type(`#doc_ref_no${i + 1}`, passParts[i]);
         }
 
-        // (3) 1차 확인 버튼 클릭
+        // ④ 1차 확인 버튼 클릭
+        await page.waitForSelector("#btn_end", { timeout: 10000 });
         await page.click("#btn_end");
-        console.log("1차 확인 버튼 클릭");
 
-        await delay(delayTime); // 결과창 로드 대기
-
-        const docKeyInputSelector = "#doc_ref_key";
-        const docKeyExists = await page.$(docKeyInputSelector);
-
-        if (docKeyExists) {
-            // 이름 입력 필드가 보이도록 스크롤
-            await page.evaluate((selector) => {
-                const element = document.querySelector(selector);
-                if (element) {
-                    element.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-            }, docKeyInputSelector);
-
-            await delay(1500); // 스크롤 이동 후 대기
-
-            await page.type(docKeyInputSelector, item.name); // 성명 입력
-            await page.click("#btn_end");
-            console.log("성명 입력 및 확인 버튼 클릭");
-
-            // temp1 사진 촬영
-            const temp1Path = path.join(tempDir, "temp1.png");
-            await page.screenshot({ path: temp1Path });
-            console.log(`📸 temp1 스크린샷 저장 완료: ${temp1Path}`);
-
-            await delay(delayTime + 2000); // 결과 로드 대기
-
-            const docViewSelector = 'a[onclick="javascript:view_doc();return false;"]';
-            const docViewButton = await page.$(docViewSelector);
-            if (docViewButton) {
-                await docViewButton.click();
-                console.log("문서 확인 버튼 클릭");
-                await delay(delayTime + 3500);
-
-                const pages = await browser.pages();
-                const newPage = pages[pages.length - 1];
-                await delay(delayTime);
-
-                // temp2 사진 촬영
-                const temp2Path = path.join(tempDir, "temp2.png");
-                await newPage.screenshot({ path: temp2Path });
-                console.log(`📸 temp2 스크린샷 저장 완료: ${temp2Path}`);
-
-
-                // 이미지 병합
-                const temp1Meta = await sharp(temp1Path).metadata();
-                const temp2Meta = await sharp(temp2Path).metadata();
-
-                const totalWidth = temp1Meta.width + temp2Meta.width;
-                const maxHeight = Math.max(temp1Meta.height, temp2Meta.height);
-
-                const imageBuffer = await sharp({
-                    create: {
-                        width: totalWidth,
-                        height: maxHeight,
-                        channels: 3,
-                        background: { r: 255, g: 255, b: 255 },
-                    },
-                })
-                    .composite([
-                        { input: temp1Path, left: 0, top: 0 },
-                        { input: temp2Path, left: temp1Meta.width, top: 0 },
-                    ])
-                    .png()
-                    .toBuffer();
-
-                const finalFileName = `${item.registerationNumber}_${fileName}.png`;
-                item.zipPath = `${fileName}/${finalFileName}`;
-
-                item.imageBase64 = imageBuffer.toString("base64");
-
-
-
-
-                item.result = 1;
-
-                // temp 이미지 삭제
-                fs.unlinkSync(temp1Path);
-                fs.unlinkSync(temp2Path);
-                console.log("📂 temp 파일 삭제 완료");
-
-                return;
-            }
+        // ⑤ 실패 팝업 여부 판단
+        const failPopup = await page.waitForSelector('#mw_pop_01[style*="block"]', { timeout: delayTime }).catch(() => null);
+        if (failPopup) {
+            item.result = 0;
+            item.error = "문서 없음";
+            item.zipPath = null;
+            item.imageBase64 = null;
+            return;
         }
 
-        console.log("문서 존재하지 않음");
-        item.zipPath = null;
-        item.imageBase64 = null;
+        // ⑥ 성명 입력창 등장 확인
+        await page.waitForSelector('input[name="doc_ref_key_element"]', { timeout: 10000 });
 
-        item.result = 0;
-        item.error = "문서 없음";
+        // ⑦ 성명 입력 및 재확인 클릭
+        await page.type('#doc_ref_key', item.name);
+        await page.waitForSelector("#btn_end", { timeout: 10000 });
+        await page.click("#btn_end");
+
+        // ⑧ form#form1 등장 대기 → temp1 스크린샷
+        await page.waitForSelector('form#form1', { timeout: 10000 });
+        const temp1Path = path.join(tempDir, "temp1.png");
+        await page.screenshot({ path: temp1Path });
+        console.log(`📸 temp1 저장: ${temp1Path}`);
+
+        // ⑨ 문서확인 버튼 클릭
+        const viewButton = await page.waitForSelector('a[onclick*="view_doc"]', { timeout: 10000 });
+        await viewButton.click();
+
+        // ⑩ 새 탭 렌더 완료 대기
+        await new Promise(resolve => setTimeout(resolve, 3000)); // 새 창 열리는 여유
+        const pages = await browser.pages();
+        const newPage = pages[pages.length - 1];
+        await newPage.waitForFunction(() => document.readyState === 'complete', { timeout: 10000 });
+
+        // ⑪ temp2 스크린샷
+        const temp2Path = path.join(tempDir, "temp2.png");
+        await newPage.screenshot({ path: temp2Path });
+        console.log(`📸 temp2 저장: ${temp2Path}`);
+
+        // ⑫ 이미지 병합 및 결과 저장
+        const temp1Meta = await sharp(temp1Path).metadata();
+        const temp2Meta = await sharp(temp2Path).metadata();
+        const totalWidth = temp1Meta.width + temp2Meta.width;
+        const maxHeight = Math.max(temp1Meta.height, temp2Meta.height);
+        const imageBuffer = await sharp({
+            create: {
+                width: totalWidth,
+                height: maxHeight,
+                channels: 3,
+                background: { r: 255, g: 255, b: 255 },
+            },
+        })
+            .composite([
+                { input: temp1Path, left: 0, top: 0 },
+                { input: temp2Path, left: temp1Meta.width, top: 0 },
+            ])
+            .png()
+            .toBuffer();
+
+        const finalFileName = `${item.registerationNumber}_${fileName}.png`;
+        item.zipPath = `${fileName}/${finalFileName}`;
+        item.imageBase64 = imageBuffer.toString("base64");
+        item.result = 1;
+
+        // temp 삭제
+        fs.unlinkSync(temp1Path);
+        fs.unlinkSync(temp2Path);
+        console.log("📂 temp 이미지 삭제 완료");
     } catch (error) {
         console.error(`${item.name} 처리 중 오류 발생:`, error);
-        item.zipPath = null;
-        item.imageBase64 = null;
-
         item.result = 0;
         item.error = "처리중 오류";
+        item.zipPath = null;
+        item.imageBase64 = null;
     } finally {
         await browser.close();
-
-        // 사람별 temp 폴더 삭제
         if (fs.existsSync(tempDir)) {
             fs.rmSync(tempDir, { recursive: true, force: true });
-            console.log(`📂 temp 디렉토리 삭제 완료: ${tempDir}`);
+            console.log(`📂 temp 폴더 삭제 완료: ${tempDir}`);
         }
     }
 }

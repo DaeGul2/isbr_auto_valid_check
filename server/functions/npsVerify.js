@@ -68,7 +68,7 @@ async function npsVerify(item, delayTime) {
 
     if (topMsgText.includes("발급하셨습니다")) {
       item.result = 1;
-      const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
+      const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
       item.zipPath = `국민연금가입자증명/${fileName}`;
       const buffer = await page.screenshot({ encoding: "base64" });
       item.imageBase64 = buffer;
