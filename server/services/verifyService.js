@@ -25,18 +25,19 @@ exports.handleVerification = async (item) => {
   } else if (cleanedInstitution === "opic") {
     await opicVerify(item, delayTime);
   } else if (
-    ["초본", "성적증명서", "졸업증명서", "등본", "어학성적사전등록확인서"]
-      .includes(cleanedInstitution)
+    ["초본", "성적증명서", "졸업증명서", "등본", "어학성적사전등록확인서"].includes(cleanedInstitution)
   ) {
     await govVerify(item, delayTime + 2000, rawInstitution.trim());
   } else if (cleanedInstitution === "건강보험자격득실확인서") {
-    if (/^\d{4}-\d{4}-\d{4}-\d{4}$/.test(passNum)) {
+    // 형식 검증 제거: passNum이 있으면 정부24 경로, 없으면 NHIS 경로
+    if (passNum) {
       await govVerify(item, delayTime + 2000, rawInstitution.trim());
     } else {
       await insuranceNhis(item, delayTime);
     }
   } else if (cleanedInstitution === "국민연금가입자증명") {
-    if (/^\d{4}-\d{4}-\d{4}-\d{4}$/.test(passNum)) {
+    // 형식 검증 제거: passNum이 있으면 정부24 경로, 없으면 NPS 경로
+    if (passNum) {
       await govVerify(item, delayTime + 2000, rawInstitution.trim());
     } else {
       await npsVerify(item, delayTime);
@@ -47,4 +48,5 @@ exports.handleVerification = async (item) => {
 
   return item;
 };
+
 

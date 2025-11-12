@@ -108,7 +108,7 @@ const ExcelUploader = () => {
       }
       if (inst === '국민연금가입자증명') {
         const passNum = row[passNumIdx] || '';
-        const isGov24 = /^\d{4}-\d{4}-\d{4}-\d{4}$/.test(passNum);
+        const isGov24 = /^\d{4,5}-\d{4,5}-\d{4,5}-\d{4,5}$/.test(passNum);
 
         // extraNum 존재해야 함
         const extraNum = row[loweredHeaders.indexOf('extranum')] || '';
