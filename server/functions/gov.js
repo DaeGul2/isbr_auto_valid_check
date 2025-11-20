@@ -70,7 +70,7 @@ async function govVerify(item, delayTime, fileName) {
         await newPage.waitForFunction(() => document.readyState === 'complete', { timeout: 20000 });
 
         // ✅ iframe 접근 및 내부 로딩 완료 대기
-        await newPage.waitForSelector('#viewerFrame', { timeout: 20000 });
+        await newPage.waitForSelector('#viewerFrame', { timeout: 40000 });
         const frameHandle = await newPage.$('#viewerFrame');
         const frame = await frameHandle.contentFrame();
 
@@ -80,12 +80,22 @@ async function govVerify(item, delayTime, fileName) {
 
         // ✅ iframe 내부 HTML 저장 (디버깅용)
         const content = await frame.content();
-        fs.writeFileSync(`./iframe_debug_${item.registerationNumber}.txt`, content, { encoding: 'utf-8' });
+        // fs.writeFileSync(`./iframe_debug_${item.registerationNumber}.txt`, content, { encoding: 'utf-8' });
+
+        // 🔽🔽🔽 여기부터 추가: 두 번째 스샷 전에 viewport 축소 🔽🔽🔽
+        const currentViewport = newPage.viewport(); // 필요하면 나중에 되돌릴 수 있음 (지금은 안 씀)
+
+        // 예시: 가로·세로를 좀 더 작은 값으로 설정
+        await newPage.setViewport({
+            width: 1200,   // 너비 줄이고
+            height: 1000    // 높이는 적당히
+        });
 
         // ⑪ temp2 스크린샷
         const temp2Path = path.join(tempDir, "temp2.png");
-        await newPage.screenshot({ path: temp2Path });
+        await newPage.screenshot({ path: temp2Path, fullPage: true });
         console.log(`📸 temp2 저장: ${temp2Path}`);
+        // 🔼🔼🔼 여기까지가 뷰포트 축소 + 두 번째 스샷 부분 🔼🔼🔼
 
         // ⑫ 이미지 병합 및 결과 저장
         const temp1Meta = await sharp(temp1Path).metadata();
