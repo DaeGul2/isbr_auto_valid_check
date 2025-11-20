@@ -13,6 +13,7 @@ exports.handleVerification = async (item) => {
   const rawInstitution = item.institution || "";
   const cleanedInstitution = rawInstitution.replace(/\s/g, "").trim().toLowerCase();
   const passNum = (item.passNum || "").trim();
+  const certificateName = (item.certificateName  || "").trim();
 
   if (cleanedInstitution === "한국세무사회") {
     await semuVerify(item, delayTime, "한국세무사회");
@@ -27,7 +28,7 @@ exports.handleVerification = async (item) => {
   } else if (
     ["초본", "성적증명서", "졸업증명서", "등본", "어학성적사전등록확인서"].includes(cleanedInstitution)
   ) {
-    await govVerify(item, delayTime + 2000, rawInstitution.trim());
+    await govVerify(item, delayTime + 2000, rawInstitution.trim(), certificateName);
   } else if (cleanedInstitution === "건강보험자격득실확인서") {
     // 형식 검증 제거: passNum이 있으면 정부24 경로, 없으면 NHIS 경로
     if (passNum) {

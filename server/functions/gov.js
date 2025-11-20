@@ -4,7 +4,7 @@ const path = require("path");
 const sharp = require("sharp");
 const { launchBrowser } = require("../utils/puppeteerHelper");
 
-async function govVerify(item, delayTime, fileName) {
+async function govVerify(item, delayTime, fileName, certificateName) {
     const { browser, page } = await launchBrowser();
     const tempDir = `./images/temp/${item.registerationNumber}`;
     if (!fs.existsSync(tempDir)) {
@@ -118,7 +118,7 @@ async function govVerify(item, delayTime, fileName) {
             .toBuffer();
 
         const finalFileName = `${item.registerationNumber}_${fileName}.png`;
-        item.zipPath = `${fileName}/${finalFileName}`;
+        item.zipPath = `${fileName}/${certificateName}/${finalFileName}`;
         item.imageBase64 = imageBuffer.toString("base64");
         item.result = 1;
 
