@@ -13,7 +13,7 @@ exports.handleVerification = async (item) => {
   const rawInstitution = item.institution || "";
   const cleanedInstitution = rawInstitution.replace(/\s/g, "").trim().toLowerCase();
   const passNum = (item.passNum || "").trim();
-  const certificateName = (item.certificateName  || "").trim();
+  const certificateName = (item.certificateName || "").trim();
 
   if (cleanedInstitution === "한국세무사회") {
     await semuVerify(item, delayTime, "한국세무사회");
@@ -30,10 +30,21 @@ exports.handleVerification = async (item) => {
   ) {
     await govVerify(item, delayTime + 2000, rawInstitution.trim(), certificateName);
   } else if (cleanedInstitution === "건강보험자격득실확인서") {
-    // 형식 검증 제거: passNum이 있으면 정부24 경로, 없으면 NHIS 경로
-    if (passNum) {
-      await govVerify(item, delayTime + 2000, rawInstitution.trim());
+    // passNum 조건에 따라 gov / NHIS 분기
+    const trimmedPassNum = (passNum || '').toString().trim();
+
+    if (trimmedPassNum) {
+      // passNum이 있을 때
+      if (trimmedPassNum.startsWith('G')) {
+        // G로 시작하면 NHIS 경로
+        await insuranceNhis(item, delayTime);
+      } else {
+        // 그 외는 정부24 경로
+        console.log("정부24 경로로 진행합니다.");
+        await govVerify(item, delayTime + 2000, rawInstitution.trim());
+      }
     } else {
+      // passNum이 없으면 기본 NHIS 경로
       await insuranceNhis(item, delayTime);
     }
   } else if (cleanedInstitution === "국민연금가입자증명") {
