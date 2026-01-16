@@ -1,167 +1,258 @@
-const puppeteer = require("puppeteer");
-const path = require("path");
-const fs = require("fs");
-const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-const { dir } = require("console");
+// server/functions/hanguksa.js
 const { launchBrowser } = require("../utils/puppeteerHelper");
 
-function parseBirth(birth) {
-    if (!birth) {
-        throw new Error("생년월일 데이터가 없습니다.");
-    }
-
-    // 문자열로 변환하고 숫자만 남김
-    const raw = String(birth).replace(/[^0-9]/g, "");
-
-    if (raw.length === 6) {
-        // yyMMdd
-        const year = parseInt(raw.slice(0, 2), 10);
-        const prefix = year >= 50 ? "19" : "20"; // 50 이상이면 1900년대, 이하이면 2000년대
-        return `${prefix}${raw}`;
-    } else if (raw.length === 8) {
-        // yyyyMMdd
-        return raw;
-    } else {
-        throw new Error(`생년월일 형식이 올바르지 않습니다: ${birth}`);
-    }
-}
-
-
-// 지정된 시간만큼 딜레이를 추가하는 함수
 function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// 한국사 사이트 검증 함수
-async function hanguksaVerify(item, delayTime, directoryName) {
-    // 스크린샷 디렉토리 생성
-    const { browser, page } = await launchBrowser();
+function parseBirth(birth) {
+  if (!birth) throw new Error("생년월일 데이터가 없습니다.");
 
-    // 한국사 진위 확인 페이지로 이동
-    const verifyUrl = "https://www.historyexam.go.kr/etcPageLink.do?link=trueChk&...";
-    await page.goto(verifyUrl, { waitUntil: "networkidle2" });
+  const raw = String(birth).replace(/[^0-9]/g, "");
+  if (raw.length === 6) {
+    const yy = parseInt(raw.slice(0, 2), 10);
+    const prefix = yy >= 50 ? "19" : "20";
+    return `${prefix}${raw}`;
+  }
+  if (raw.length === 8) return raw;
 
-    console.log("한국사 진위 확인 페이지로 이동");
+  throw new Error(`생년월일 형식이 올바르지 않습니다: ${birth}`);
+}
 
-    try {
-        // 인증번호 파싱
-        const [firstNum, secondNum] = item.passNum.split("-");
-        if (!firstNum || !secondNum) {
-            throw new Error("인증번호 형식이 올바르지 않습니다. (올바른 형식: xxxx-xxxxxx)");
-        }
+/**
+ * ✅ 한국사 passNum 보정
+ * - '-' 있으면 그대로
+ * - 없으면 숫자만 뽑아서 "앞2자리-나머지"로 변환
+ *   예) 4112345 -> 41-12345
+ */
+function normalizeHanguksaPassNum(passNum) {
+  const s = String(passNum || "").trim();
+  if (!s) return "";
 
-        // 이름 입력 필드 초기화 및 입력
-        await page.evaluate(() => {
-            document.querySelector("#kr_name").value = "";
-        });
-        await page.type("#kr_name", item.name);
+  // 이미 하이픈 있으면 OK
+  if (s.includes("-")) return s;
 
-        // 인증번호 첫자리 입력 필드 초기화 및 입력
-        await page.evaluate(() => {
-            document.querySelector("#certi_front").value = "";
-        });
-        await page.type("#certi_front", firstNum);
+  // 숫자만 추출
+  const digits = s.replace(/[^0-9]/g, "");
+  if (digits.length < 3) return s; // 너무 짧으면 원본 유지
 
-        // 인증번호 둘째자리 입력 필드 초기화 및 입력
-        await page.evaluate(() => {
-            document.querySelector("#certi_back").value = "";
-        });
-        await page.type("#certi_back", secondNum);
+  // 앞 2자리 + 나머지
+  return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+}
 
-        // 생년월일 입력
-        const formattedBirth = parseBirth(item.birth);
-        await page.evaluate(() => {
-            document.querySelector("#birth").value = "";
-        });
-        await page.type("#birth", formattedBirth);
+/**
+ * ✅ 생년월일 있는 버전 (기존 로직)
+ * ❗기존 흐름 유지하되 passNum 하이픈 보정만 추가
+ */
+async function hanguksaVerifyWithBirth(item, delayTime, directoryName) {
+  const { browser, page } = await launchBrowser();
 
-        // 인증번호 확인 버튼 클릭
-        await page.click("#btnConfirm");
-        await delay(delayTime); // 결과 로드 대기
+  const verifyUrl =
+    process.env.HANGUKSA_WITH_BIRTH_URL ||
+    "https://www.historyexam.go.kr/etcPageLink.do?link=trueChk&...";
 
+  await page.goto(verifyUrl, { waitUntil: "networkidle2" });
 
+  try {
+    // ✅ 여기서 passNum 보정
+    const fixedPassNum = normalizeHanguksaPassNum(item.passNum);
 
-        const result = await page.evaluate(() => {
-            const tbody = document.querySelector("tbody");
-            if (!tbody) return null;
-
-            // 결과 데이터를 담을 객체 초기화
-            const resultData = {};
-
-            // <tr> 내부에서 <th>와 <td>를 한 쌍으로 처리
-            const rows = Array.from(tbody.querySelectorAll("tr"));
-            rows.forEach((row) => {
-                const headers = Array.from(row.querySelectorAll("th")); // <th> 컬럼
-                const values = Array.from(row.querySelectorAll("td")); // <td> 데이터
-
-                headers.forEach((header, index) => {
-                    const key = header.textContent.trim(); // <th>의 텍스트
-                    const value = values[index]?.textContent.trim(); // 대응되는 <td> 값
-                    if (key && value) {
-                        resultData[key] = value; // 데이터를 key-value로 저장
-                    }
-                });
-            });
-
-            // 데이터 확인
-            if (resultData["합격여부"] === "합격") {
-                return {
-                    isValid: true,
-                    data: {
-                        회차: resultData["회차"],
-                        성명: resultData["성명"],
-                        등급: resultData["등급"],
-                        합격여부: resultData["합격여부"],
-                    },
-                };
-            } else {
-                return { isValid: false, data: null };
-            }
-        });
-
-        // 결과 처리
-        if (result?.isValid) {
-            const { 회차, 성명, 등급, 합격여부 } = result.data;
-            item.date = 회차; // 회차를 date에 저장
-
-            if (합격여부.trim() === '합격') {
-                item.result = 1;
-            } else {
-                item.result = 0;
-            }
-            item.subs = `한국사능력검정시험${등급}`; // 등급 및 합격여부 저장
-            // 결과 스크린샷 저장
-            // const resultScreenshotPath = path.join(screenshotDir, `${item.name}_한국사_result.png`);
-            const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
-            item.zipPath = `자격증/${directoryName}/${fileName}`;
-            const buffer = await page.screenshot({ encoding: "base64" });
-            item.imageBase64 = buffer;
-
-
-            console.log(
-                `${item.name}, 합격 여부 : 합격\n회차 : ${회차}\n등급 : ${등급}, 합격여부 : ${합격여부}`
-            );
-        } else {
-            item.date = ""; // 회차 없음
-            item.result = 0; // 실패
-            item.subs = ""; // 종목명 없음
-            item.zipPath = null;
-            item.imageBase64 = null;
-
-            console.log(`${item.name}, 진위 확인 실패`);
-        }
-
-        // 딜레이 추가
-        await delay(delayTime);
-    } catch (error) {
-        console.error(`${item.name} 처리 중 오류 발생:`, error);
-        item.zipPath = null;
-        item.imageBase64 = null;
-
-        item.result = 0; // 실패로 처리
-    } finally {
-        await browser.close();
+    const [firstNum, secondNum] = String(fixedPassNum || "").split("-");
+    if (!firstNum || !secondNum) {
+      throw new Error("인증번호 형식이 올바르지 않습니다. (올바른 형식: xx-xxxxxx)");
     }
+
+    // name
+    await page.waitForSelector("#kr_name", { timeout: 10000 });
+    await page.evaluate(() => {
+      const el = document.querySelector("#kr_name");
+      if (el) el.value = "";
+    });
+    await page.type("#kr_name", String(item.name || ""));
+
+    // certi_front/back
+    await page.waitForSelector("#certi_front", { timeout: 10000 });
+    await page.evaluate(() => {
+      const el = document.querySelector("#certi_front");
+      if (el) el.value = "";
+    });
+    await page.type("#certi_front", String(firstNum));
+
+    await page.waitForSelector("#certi_back", { timeout: 10000 });
+    await page.evaluate(() => {
+      const el = document.querySelector("#certi_back");
+      if (el) el.value = "";
+    });
+    await page.type("#certi_back", String(secondNum));
+
+    // birth
+    const formattedBirth = parseBirth(item.birth);
+    await page.waitForSelector("#birth", { timeout: 10000 });
+    await page.evaluate(() => {
+      const el = document.querySelector("#birth");
+      if (el) el.value = "";
+    });
+    await page.type("#birth", String(formattedBirth));
+
+    // submit
+    await page.waitForSelector("#btnConfirm", { timeout: 10000 });
+    await page.click("#btnConfirm");
+
+    await delay(delayTime);
+
+    // 결과 파싱
+    const result = await page.evaluate(() => {
+      const tbody = document.querySelector("tbody");
+      if (!tbody) return null;
+
+      const resultData = {};
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      rows.forEach((row) => {
+        const ths = Array.from(row.querySelectorAll("th"));
+        const tds = Array.from(row.querySelectorAll("td"));
+
+        ths.forEach((th, idx) => {
+          const key = (th.textContent || "").trim();
+          const value = (tds[idx]?.textContent || "").trim();
+          if (key && value) resultData[key] = value;
+        });
+      });
+
+      if (resultData["합격여부"]) {
+        return {
+          isValid: true,
+          data: {
+            회차: resultData["회차"],
+            성명: resultData["성명"],
+            등급: resultData["등급"],
+            합격여부: resultData["합격여부"],
+          },
+        };
+      }
+      return { isValid: false, data: null };
+    });
+
+    if (result?.isValid) {
+      const { 회차, 등급, 합격여부 } = result.data;
+
+      item.date = 회차 || "";
+      item.result = String(합격여부 || "").trim() === "합격" ? 1 : 0;
+      item.subs = 등급 ? `한국사능력검정시험${등급}` : "";
+
+      const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
+      item.zipPath = `자격증/${directoryName}/${fileName}`;
+      item.imageBase64 = await page.screenshot({ encoding: "base64" });
+    } else {
+      item.date = "";
+      item.result = 0;
+      item.subs = "";
+      item.zipPath = null;
+      item.imageBase64 = null;
+    }
+
+    await delay(delayTime);
+  } catch (error) {
+    console.error(`${item.name} 처리 중 오류 발생:`, error);
+    item.zipPath = null;
+    item.imageBase64 = null;
+    item.result = 0;
+    item.error = error.message;
+  } finally {
+    await browser.close();
+  }
 }
 
-module.exports = { hanguksaVerify };
+/**
+ * ✅ 생년월일 없는 버전 (정부24)
+ * - URL: https://www.gov.kr/mw/KoreaHistoryCertTruthInfo.do
+ * - userNm = name
+ * - authCd = passNum(보정 적용)
+ * - fn_search() 클릭
+ * - body 텍스트에서 성공/실패 키워드 뜰 때까지 대기
+ */
+async function hanguksaVerifyNoBirth(item, delayTime, directoryName) {
+  const { browser, page } = await launchBrowser();
+
+  page.on("dialog", async (d) => {
+    try {
+      await d.accept();
+    } catch (e) {}
+  });
+
+  const url = "https://www.gov.kr/mw/KoreaHistoryCertTruthInfo.do";
+  await page.goto(url, { waitUntil: "networkidle2" });
+
+  try {
+    await page.waitForSelector("#userNm", { timeout: 15000 });
+    await page.waitForSelector("#authCd", { timeout: 15000 });
+
+    // ✅ passNum 보정
+    const fixedPassNum = normalizeHanguksaPassNum(item.passNum);
+
+    // userNm
+    await page.evaluate(() => {
+      const el = document.querySelector("#userNm");
+      if (el) el.value = "";
+    });
+    await page.type("#userNm", String(item.name || ""), { delay: 20 });
+
+    // authCd
+    await page.evaluate(() => {
+      const el = document.querySelector("#authCd");
+      if (el) el.value = "";
+    });
+    await page.type("#authCd", String(fixedPassNum || ""), { delay: 20 });
+
+    // 조회 실행
+    const btn = await page.$('a[href="javaScript:fn_search();"]');
+    if (btn) {
+      await btn.click();
+    } else {
+      await page.evaluate(() => {
+        if (typeof fn_search === "function") fn_search();
+      });
+    }
+
+    const successKey = "인증서 진위확인";
+    const failKey = "해당되는 인증번호가 없습니다";
+
+    await page.waitForFunction(
+      (sKey, fKey) => {
+        const text = (document.body?.innerText || "").replace(/\s+/g, " ").trim();
+        return text.includes(sKey) || text.includes(fKey);
+      },
+      { timeout: 30000 },
+      successKey,
+      failKey
+    );
+
+    const isOk = await page.evaluate((sKey, fKey) => {
+      const text = (document.body?.innerText || "").replace(/\s+/g, " ").trim();
+      if (text.includes(fKey)) return false;
+      return text.includes(sKey);
+    }, successKey, failKey);
+
+    item.result = isOk ? 1 : 0;
+    item.date = "";
+    item.subs = "";
+
+    const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
+    item.zipPath = `자격증/${directoryName}/${fileName}`;
+    item.imageBase64 = await page.screenshot({ encoding: "base64", fullPage: true });
+
+    await delay(delayTime);
+  } catch (error) {
+    console.error(`${item.name} (국사 noBirth) 처리 중 오류:`, error);
+    item.result = 0;
+    item.zipPath = null;
+    item.imageBase64 = null;
+    item.error = error.message;
+  } finally {
+    await browser.close();
+  }
+}
+
+module.exports = {
+  hanguksaVerifyWithBirth,
+  hanguksaVerifyNoBirth,
+};
