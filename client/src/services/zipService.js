@@ -1,41 +1,45 @@
 import axios from "axios";
 import { saveAs } from "file-saver";
-import { sendBatchLog } from "./logService";
 
-const VERIFY_API_URL = process.env.REACT_APP_VERIFY_API_URL;
-const ZIP_API_URL    = process.env.REACT_APP_ZIP_API_URL;
+// ✅ 1순위: 너가 박아둔 env 직접 사용
+const VERIFY_API_URL =
+  process.env.REACT_APP_VERIFY_API_URL || "/api/verify";
+
+const ZIP_API_URL =
+  process.env.REACT_APP_ZIP_API_URL || "/api/zip";
 
 /**
- * 3개 단위 병렬 요청 처리 및 상태 리턴
- * @param zipName  서버에 결과 누적할 때 사용할 key
+ * 병렬 요청 처리
  */
 export async function verifyInChunks(
   dataObjects,
   user,
   chunkSize = 3,
   onResult,
-  zipName   // ← zipName 파라미터 추가
+  zipName,
+  hanguksaMode = "withBirth"
 ) {
   for (let i = 0; i < dataObjects.length; i += chunkSize) {
     const chunk = dataObjects.slice(i, i + chunkSize);
 
     const responses = await Promise.all(
-      chunk.map(item =>
+      chunk.map((item) =>
         axios
           .post(VERIFY_API_URL, {
-            items:  [item],
+            items: [item],
             user,
-            zipName,   // ← 여기 포함
+            zipName,
+            hanguksaMode,
           })
-          .then(res => {
+          .then((res) => {
             const r = res.data.data[0];
-            r._index = item._index; // index 보존
+            r._index = item._index;
             return r;
           })
-          .catch(err => ({
+          .catch((err) => ({
             ...item,
             result: 0,
-            error: err.message || '요청 실패',
+            error: err?.response?.data?.error || err.message || "요청 실패",
           }))
       )
     );
@@ -45,7 +49,7 @@ export async function verifyInChunks(
 }
 
 /**
- * 서버에 zip 파일 생성 요청하고 다운로드
+ * ZIP 다운로드
  */
 export async function requestZipDownload(zipName) {
   try {
@@ -54,6 +58,7 @@ export async function requestZipDownload(zipName) {
       { zipName },
       { responseType: "blob" }
     );
+
     const blob = new Blob([res.data], { type: "application/zip" });
     saveAs(blob, zipName);
   } catch (err) {
