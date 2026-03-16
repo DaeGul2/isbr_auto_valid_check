@@ -8,6 +8,7 @@ const { semuVerify } = require("../functions/semu");
 const { insuranceNhis } = require("../functions/insuranceNhis");
 const { govVerify } = require("../functions/gov");
 const { npsVerify } = require("../functions/npsVerify");
+const { dataqVerify } = require("../functions/dataq");
 
 const delayTime = 3000;
 
@@ -58,6 +59,8 @@ exports.handleVerification = async (item, options = {}) => {
     } else {
       await insuranceNhis(item, delayTime);
     }
+  } else if (cleanedInstitution === "한국데이터산업진흥원" || cleanedInstitution === "한국데이터산업진흥원장") {
+    await dataqVerify(item, delayTime, "한국데이터산업진흥원");
   } else if (cleanedInstitution === "국민연금가입자증명") {
     if (passNum) {
       await govVerify(item, delayTime + 2000, rawInstitution);

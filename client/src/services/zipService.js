@@ -30,6 +30,10 @@ export async function verifyInChunks(
             user,
             zipName,
             hanguksaMode,
+          }, {
+            timeout: 600000,       // 10분 타임아웃
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
           })
           .then((res) => {
             const r = res.data.data[0];
@@ -56,7 +60,12 @@ export async function requestZipDownload(zipName) {
     const res = await axios.post(
       ZIP_API_URL,
       { zipName },
-      { responseType: "blob" }
+      {
+        responseType: "blob",
+        timeout: 600000,         // 10분 타임아웃
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      }
     );
 
     const blob = new Blob([res.data], { type: "application/zip" });

@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require("./utils");
-const { launchBrowser } = require("../utils/puppeteerHelper");
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -86,7 +86,7 @@ async function npsVerify(item, delayTime) {
     item.imageBase64 = null;
     item.error = error.message;
   } finally {
-    await browser.close();
+    await safeBrowserClose(browser);
   }
 }
 

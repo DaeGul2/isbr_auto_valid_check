@@ -42,7 +42,11 @@ exports.verifyCertificate = async (req, res) => {
     }
 
     if (zipName) {
-      saveVerificationResults(zipName, results);
+      try {
+        saveVerificationResults(zipName, results);
+      } catch (saveErr) {
+        console.error("⚠️ 결과 저장 중 오류 (무시):", saveErr);
+      }
     }
 
     return res.json({ success: true, data: results });

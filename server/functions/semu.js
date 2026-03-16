@@ -3,7 +3,7 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-const { launchBrowser } = require("../utils/puppeteerHelper");
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 // Puppeteer Stealth 플러그인 활성화
 puppeteer.use(StealthPlugin());
 
@@ -225,7 +225,7 @@ async function semuVerify(item, delayTime, directoryName) {
         item.zipPath = null;
         item.imageBase64 = null;
     } finally {
-        await browser.close();
+        await safeBrowserClose(browser);
     }
 }
 

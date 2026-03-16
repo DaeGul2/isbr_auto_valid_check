@@ -3,7 +3,7 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-const { launchBrowser } = require("../utils/puppeteerHelper");
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 // Puppeteer Stealth 플러그인 활성화
 puppeteer.use(StealthPlugin());
@@ -148,7 +148,7 @@ async function opicVerify(item, delayTime) {
         item.imageBase64 = null;
         item.error = error.message; // 에러 메시지 저장
     } finally {
-        await browser.close();
+        await safeBrowserClose(browser);
     }
 }
 

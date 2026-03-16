@@ -50,6 +50,7 @@ const validInstitutions = [
   "어학성적 사전등록 확인서",
   "건강보험자격득실확인서",
   "국민연금가입자증명",
+  "한국데이터산업진흥원",
 ];
 const normalizedValid = validInstitutions.map((inst) =>
   inst.replace(/\s/g, "").toLowerCase()

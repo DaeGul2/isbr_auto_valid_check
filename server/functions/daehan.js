@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-const { launchBrowser } = require("../utils/puppeteerHelper");
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 
 // 지정된 시간만큼 딜레이를 추가하는 함수
@@ -103,7 +103,7 @@ async function daehanLoginAndVerify(item, delayTime, directoryName) {
         item.imageBase64 = null;
         console.error(`${item.name} 처리 중 오류 발생:`, error);
     } finally {
-        await browser.close();
+        await safeBrowserClose(browser);
     }
 }
 
