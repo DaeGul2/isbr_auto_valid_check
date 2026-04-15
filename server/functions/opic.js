@@ -1,12 +1,7 @@
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const path = require("path");
 const fs = require("fs");
-const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-const { launchBrowser } = require("../utils/puppeteerHelper");
-
-// Puppeteer Stealth 플러그인 활성화
-puppeteer.use(StealthPlugin());
+const { getResultScreenshotPath } = require('./utils');
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 
 // 지정된 시간만큼 딜레이를 추가하는 함수
@@ -105,6 +100,7 @@ async function opicVerify(item, delayTime) {
             item.subs = 등급;
             item.date = 발급일;
             item.result = 1;
+            console.log(`${item.name}, 합격 여부 : 성공\n등급 : ${등급}, 발급일 : ${발급일}`);
         } else {
             item.subs = "";
             item.date = "";
@@ -112,24 +108,6 @@ async function opicVerify(item, delayTime) {
             item.imageBase64 = null;
             item.zipPath = null;
             item.error = result.errorMessage;
-            console.log(`${item.name}, 진위 확인 실패: ${item.error}`);
-        }
-
-        // 결과 처리
-        if (result?.isValid) {
-            const { 등급, 발급일 } = result.data;
-            item.subs = 등급; // 등급 저장
-            item.date = 발급일; // 발급일 저장
-            item.result = 1; // 성공
-            console.log(`${item.name}, 합격 여부 : 성공\n등급 : ${등급}, 발급일 : ${발급일}`);
-        } else {
-            item.subs = ""; // 데이터 없음
-            item.date = ""; // 발급일 없음
-            item.result = 0;
-            item.zipPath = null;
-            item.imageBase64 = null;
-
-            item.error = result.errorMessage; // 에러 메시지 저장
             console.log(`${item.name}, 진위 확인 실패: ${item.error}`);
         }
 
@@ -148,7 +126,7 @@ async function opicVerify(item, delayTime) {
         item.imageBase64 = null;
         item.error = error.message; // 에러 메시지 저장
     } finally {
-        await browser.close();
+        await safeBrowserClose(browser);
     }
 }
 

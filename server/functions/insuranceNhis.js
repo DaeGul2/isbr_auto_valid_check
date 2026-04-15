@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const cheerio = require("cheerio");  // ✅ 추가: cheerio 불러오기
-const { launchBrowser } = require("../utils/puppeteerHelper");
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 // 딜레이 함수
 function delay(ms) {
@@ -121,7 +121,7 @@ async function insuranceNhis(item, delayTime) {
         item.zipPath = null;
         item.imageBase64 = null;
     } finally {
-        await browser.close();
+        await safeBrowserClose(browser);
     }
 }
 

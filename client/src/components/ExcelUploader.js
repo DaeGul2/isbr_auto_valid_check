@@ -347,7 +347,26 @@ const ExcelUploader = () => {
       status,
     });
 
-    await requestZipDownload(zipName);
+    // ✅ ZIP 다운로드 — 결과에 따라 사용자에게 명확한 피드백
+    const successCount = allResults.filter((r) => r.result === 1).length;
+    const failCount = allResults.filter((r) => r.result !== 1).length;
+
+    const downloadResult = await requestZipDownload(zipName);
+
+    if (downloadResult.success) {
+      alert(
+        `✅ 다운로드 완료!\n\n` +
+        `전체: ${allResults.length}건\n` +
+        `성공: ${successCount}건\n` +
+        `실패: ${failCount}건`
+      );
+    } else {
+      alert(
+        `❌ ZIP 다운로드 실패\n\n` +
+        `사유: ${downloadResult.error}\n\n` +
+        `검증 결과 — 성공: ${successCount}건, 실패: ${failCount}건`
+      );
+    }
   };
 
   return (

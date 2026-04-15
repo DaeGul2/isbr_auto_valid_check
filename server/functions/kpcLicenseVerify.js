@@ -1,13 +1,7 @@
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const path = require("path");
 const fs = require("fs");
-const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-const { launchBrowser } = require("../utils/puppeteerHelper");
-
-
-// Puppeteer Stealth 플러그인 활성화
-puppeteer.use(StealthPlugin());
+const { getResultScreenshotPath } = require('./utils');
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 // 생년월일 처리 함수
 function parseBirth(birth) {
@@ -147,7 +141,7 @@ async function kpcLicenseVerify(item, delayTime, directoryName) {
         item.imageBase64 = null;
 
     } finally {
-        await browser.close();
+        await safeBrowserClose(browser);
     }
 }
 

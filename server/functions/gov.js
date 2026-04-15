@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
-const { launchBrowser } = require("../utils/puppeteerHelper");
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 async function govVerify(item, delayTime, fileName, certificateName) {
     const { browser, page } = await launchBrowser();
@@ -133,7 +133,7 @@ async function govVerify(item, delayTime, fileName, certificateName) {
         item.zipPath = null;
         item.imageBase64 = null;
     } finally {
-        await browser.close();
+        await safeBrowserClose(browser);
         if (fs.existsSync(tempDir)) {
             fs.rmSync(tempDir, { recursive: true, force: true });
             console.log(`📂 temp 폴더 삭제 완료: ${tempDir}`);

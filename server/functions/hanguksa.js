@@ -1,5 +1,5 @@
 // server/functions/hanguksa.js
-const { launchBrowser } = require("../utils/puppeteerHelper");
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -158,7 +158,7 @@ async function hanguksaVerifyWithBirth(item, delayTime, directoryName) {
     item.result = 0;
     item.error = error.message;
   } finally {
-    await browser.close();
+    await safeBrowserClose(browser);
   }
 }
 
@@ -248,7 +248,7 @@ async function hanguksaVerifyNoBirth(item, delayTime, directoryName) {
     item.imageBase64 = null;
     item.error = error.message;
   } finally {
-    await browser.close();
+    await safeBrowserClose(browser);
   }
 }
 

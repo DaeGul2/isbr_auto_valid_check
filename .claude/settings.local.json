@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(cd:*)",
+      "Bash(node:*)",
+      "Bash(for name:*)",
+      "Bash(do)",
+      "Bash(echo \"=== $name ===\")",
+      "Read(//c/Users/PC_1M/Desktop/at_진위조회결과_2026-03-15-12-33/청년인턴 제출서류/**)",
+      "Bash(done)"
+    ]
+  }
+}

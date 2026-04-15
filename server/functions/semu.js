@@ -1,11 +1,7 @@
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const path = require("path");
 const fs = require("fs");
-const { getResultScreenshotPath } = require('./utils'); // 유틸리티 함수 import
-const { launchBrowser } = require("../utils/puppeteerHelper");
-// Puppeteer Stealth 플러그인 활성화
-puppeteer.use(StealthPlugin());
+const { getResultScreenshotPath } = require('./utils');
+const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
 
 // 지정된 시간만큼 딜레이를 추가하는 함수
@@ -203,29 +199,30 @@ async function semuVerify(item, delayTime, directoryName) {
                 `${item.name}, 진위 여부 : 성공\n종목 : ${종목}, 합격일자 : ${합격일자}`
             );
         } else if (result?.data?.일치여부 === "불일치") {
-            item.result = "자격번호 불일치";
+            item.result = 0;
+            item.error = "자격번호 불일치";
             item.zipPath = null;
             item.imageBase64 = null;
             console.log(`${item.name}, 자격번호 불일치`);
         } else {
             item.subs = "";
             item.date = "";
-            item.result = "유효하지 않은 번호";
+            item.result = 0;
+            item.error = result.errorMessage || "유효하지 않은 번호";
             item.zipPath = null;
             item.imageBase64 = null;
-            item.error = result.errorMessage;
             console.log(`${item.name}, 진위 확인 실패: ${item.error}`);
         }
 
         await delay(delayTime);
     } catch (error) {
         console.error(`${item.name} 처리 중 오류 발생:`, error);
-        item.result = "처리 실패";
+        item.result = 0;
         item.error = error.message;
         item.zipPath = null;
         item.imageBase64 = null;
     } finally {
-        await browser.close();
+        await safeBrowserClose(browser);
     }
 }
 

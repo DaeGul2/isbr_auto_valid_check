@@ -7,3 +7,6 @@
 *.xlsx
 *.xls
 
+# ✅ 검증 결과 임시 저장소
+.result_store/
+
