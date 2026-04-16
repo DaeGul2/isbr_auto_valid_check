@@ -7,6 +7,7 @@ const { opicVerify } = require("../functions/opic");
 const { semuVerify } = require("../functions/semu");
 const { insuranceNhis } = require("../functions/insuranceNhis");
 const { govVerify } = require("../functions/gov");
+const { govDisabilityVerify } = require("../functions/govDisability");
 const { npsVerify } = require("../functions/npsVerify");
 const { dataqVerify } = require("../functions/dataq");
 
@@ -54,11 +55,13 @@ exports.handleVerification = async (item, options = {}) => {
         await insuranceNhis(item, delayTime);
       } else {
         console.log("정부24 경로로 진행합니다.");
-        await govVerify(item, delayTime + 2000, rawInstitution);
+        await govVerify(item, delayTime + 2000, rawInstitution, certificateName);
       }
     } else {
       await insuranceNhis(item, delayTime);
     }
+  } else if (cleanedInstitution.includes("장애인")) {
+    await govDisabilityVerify(item, delayTime + 2000, "장애인증명서", certificateName);
   } else if (cleanedInstitution === "한국데이터산업진흥원" || cleanedInstitution === "한국데이터산업진흥원장") {
     await dataqVerify(item, delayTime, "한국데이터산업진흥원");
   } else if (cleanedInstitution === "국민연금가입자증명") {

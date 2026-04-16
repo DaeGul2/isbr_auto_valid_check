@@ -51,6 +51,7 @@ const validInstitutions = [
   "건강보험자격득실확인서",
   "국민연금가입자증명",
   "한국데이터산업진흥원",
+  "장애인증명서",
 ];
 const normalizedValid = validInstitutions.map((inst) =>
   inst.replace(/\s/g, "").toLowerCase()
@@ -131,6 +132,19 @@ const ExcelUploader = () => {
           issues.push("birth 컬럼이 필요합니다. (한국생산성본부)");
         } else if (!row[birthIdx]) {
           issues.push("birth 값이 필요합니다. (한국생산성본부)");
+        }
+      }
+
+      // ✅ 장애인증명서 규칙 (정부24 경로, 2차 라벨이 발급번호/주민번호/성명 랜덤)
+      if (inst.includes("장애인")) {
+        const extraNum = row[loweredHeaders.indexOf("extranum")] || "";
+        if (!extraNum) {
+          issues.push("extraNum(발급번호) 값이 필요합니다. (장애인증명서)");
+        }
+        if (birthIdx === -1) {
+          issues.push("birth 컬럼이 필요합니다. (장애인증명서)");
+        } else if (!row[birthIdx]) {
+          issues.push("birth 값이 필요합니다. (장애인증명서)");
         }
       }
 

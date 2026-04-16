@@ -1,10 +1,24 @@
-const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 const { launchBrowser, safeBrowserClose } = require("../utils/puppeteerHelper");
 
-async function govVerify(item, delayTime, fileName, certificateName) {
+// 장애인증명서 전용: birth(YYMMDD 또는 YYYYMMDD) → YYMMDD 6자리로 정규화
+function parseBirthYYMMDD(birth) {
+    if (!birth) throw new Error("생년월일(birth) 데이터가 없습니다.");
+    const raw = String(birth).replace(/[^0-9]/g, "");
+    if (raw.length === 6) return raw;
+    if (raw.length === 8) return raw.slice(2, 8);
+    throw new Error(`생년월일 형식이 올바르지 않습니다: ${birth}`);
+}
+
+// 발급번호 전처리: 숫자만 추출 (공백/하이픈 제거)
+function normalizeIssueNumber(v) {
+    if (!v) return "";
+    return String(v).replace(/[^0-9]/g, "");
+}
+
+async function govDisabilityVerify(item, delayTime, fileName, certificateName) {
     const { browser, page } = await launchBrowser();
     const tempDir = `./images/temp/${item.registerationNumber}`;
     if (!fs.existsSync(tempDir)) {
@@ -23,7 +37,7 @@ async function govVerify(item, delayTime, fileName, certificateName) {
         const isChecked = await page.$eval(radioSelector, el => el.checked);
         if (!isChecked) await page.click(radioSelector);
 
-        // ③ 문서확인번호 입력
+        // ③ 문서확인번호 입력 (4분할, 마지막 칸은 4 또는 5자리)
         const rawPassNum = String(item.passNum ?? "").replace(/\s/g, "");
         const passParts = rawPassNum.split("-");
         if (passParts.length !== 4) throw new Error(`Invalid passNum format: ${item.passNum}`);
@@ -35,7 +49,7 @@ async function govVerify(item, delayTime, fileName, certificateName) {
         await page.waitForSelector("#btn_end", { timeout: 10000 });
         await page.click("#btn_end");
 
-        // ⑤ 실패 팝업 여부 판단
+        // ⑤ 실패 팝업 여부 판단 (문서확인번호 자체 오류)
         const failPopup = await page.waitForSelector('#mw_pop_01[style*="block"]', { timeout: delayTime }).catch(() => null);
         if (failPopup) {
             item.result = 0;
@@ -45,17 +59,49 @@ async function govVerify(item, delayTime, fileName, certificateName) {
             return;
         }
 
-        // ⑥ 성명 입력창 등장 확인
+        // ⑥ 2차 입력창 등장 확인
         await page.waitForSelector('input[name="doc_ref_key_element"]', { timeout: 10000 });
 
-        // ⑦ 성명 입력 및 재확인 클릭
-        await page.type('#doc_ref_key', item.name);
+        // ⑦ ★라벨 읽어서 3가지 분기★
+        // input.closest('.option_box')는 null — 2차 라벨은 별도 .option_box(두 번째)에 존재
+        const labelText = await page.evaluate(() => {
+            const boxes = Array.from(document.querySelectorAll('.option_box'));
+            return boxes.length >= 2 ? (boxes[1].innerText || "") : "";
+        });
+        console.log(`🔍 2차 입력 라벨: ${labelText.replace(/\s+/g, " ").trim()}`);
+
+        let branch = "성명";
+        let valueToType = item.name;
+
+        if (/발\s*급\s*번\s*호/.test(labelText)) {
+            branch = "발급번호";
+            valueToType = normalizeIssueNumber(item.extraNum);
+            if (!valueToType) throw new Error("발급번호(extraNum) 값이 없습니다.");
+        } else if (/주\s*민\s*등\s*록\s*번\s*호/.test(labelText)) {
+            branch = "주민번호앞6자리";
+            valueToType = parseBirthYYMMDD(item.birth);
+        } else {
+            branch = "성명";
+            valueToType = item.name;
+        }
+        console.log(`🔀 분기: ${branch} → 입력값: ${valueToType}`);
+
+        // ⑧ 분기별 값 입력 및 재확인 클릭
+        await page.type('#doc_ref_key', String(valueToType));
         await page.waitForSelector("#btn_end", { timeout: 10000 });
         await page.click("#btn_end");
 
-        // ⑧ 결과 페이지 등장 대기 → temp1 스크린샷
-        // 발급기관에 따라 결과 페이지 form 구조가 다르므로(등본/초본은 form#form1,
-        // 건강보험자격득실확인서는 다른 구조) "문서확인" 버튼이 등장하는 것을 기준으로 대기.
+        // ⑨ 2차 실패 팝업 체크 (발급번호/주민번호/성명 불일치)
+        const failPopup2 = await page.waitForSelector('#mw_pop_01[style*="block"]', { timeout: 3000 }).catch(() => null);
+        if (failPopup2) {
+            item.result = 0;
+            item.error = `2차 값 불일치(${branch})`;
+            item.zipPath = null;
+            item.imageBase64 = null;
+            return;
+        }
+
+        // ⑩ 결과 페이지 등장 대기 → temp1 스크린샷
         await page.waitForFunction(
             () => {
                 const els = document.querySelectorAll("button, a, input[type='button']");
@@ -71,9 +117,7 @@ async function govVerify(item, delayTime, fileName, certificateName) {
         await page.screenshot({ path: temp1Path });
         console.log(`📸 temp1 저장: ${temp1Path}`);
 
-        // ⑨ 문서확인 버튼 클릭 → 새 탭 열림 대기
-        // a[onclick*="view_doc"] 셀렉터는 발급기관에 따라 존재하지 않을 수 있어
-        // 텍스트 매칭으로 클릭. (등본/초본/건강보험 모두 버튼 텍스트가 "문서확인")
+        // ⑪ 문서확인 버튼 클릭 → 새 탭 열림
         const clickResult = await page.evaluate(() => {
             const candidates = Array.from(
                 document.querySelectorAll("button, a, input[type='button']")
@@ -93,41 +137,25 @@ async function govVerify(item, delayTime, fileName, certificateName) {
             throw new Error("문서확인 버튼을 찾을 수 없습니다.");
         }
 
-        // 새 탭 열릴 시간 대기
         await new Promise(resolve => setTimeout(resolve, 3000));
         const pages = await browser.pages();
         const newPage = pages[pages.length - 1];
         await newPage.waitForFunction(() => document.readyState === 'complete', { timeout: 20000 });
 
-        // ✅ iframe 접근 및 내부 로딩 완료 대기
+        // ⑫ iframe 접근 및 PDF 로딩 대기
         await newPage.waitForSelector('#viewerFrame', { timeout: 40000 });
         const frameHandle = await newPage.$('#viewerFrame');
         const frame = await frameHandle.contentFrame();
-
-        // iframe 내부의 실제 PDF 렌더링 요소 기다리기
         await frame.waitForSelector('.page', { timeout: 15000 });
         await frame.waitForSelector('.textLayer', { timeout: 15000 });
 
-        // ✅ iframe 내부 HTML 저장 (디버깅용)
-        const content = await frame.content();
-        // fs.writeFileSync(`./iframe_debug_${item.registerationNumber}.txt`, content, { encoding: 'utf-8' });
-
-        // 🔽🔽🔽 여기부터 추가: 두 번째 스샷 전에 viewport 축소 🔽🔽🔽
-        const currentViewport = newPage.viewport(); // 필요하면 나중에 되돌릴 수 있음 (지금은 안 씀)
-
-        // 예시: 가로·세로를 좀 더 작은 값으로 설정
-        await newPage.setViewport({
-            width: 1200,   // 너비 줄이고
-            height: 1000    // 높이는 적당히
-        });
-
-        // ⑪ temp2 스크린샷
+        // ⑬ 뷰포트 축소 후 temp2
+        await newPage.setViewport({ width: 1200, height: 1000 });
         const temp2Path = path.join(tempDir, "temp2.png");
         await newPage.screenshot({ path: temp2Path, fullPage: true });
         console.log(`📸 temp2 저장: ${temp2Path}`);
-        // 🔼🔼🔼 여기까지가 뷰포트 축소 + 두 번째 스샷 부분 🔼🔼🔼
 
-        // ⑫ 이미지 병합 및 결과 저장
+        // ⑭ 이미지 가로 병합
         const temp1Meta = await sharp(temp1Path).metadata();
         const temp2Meta = await sharp(temp2Path).metadata();
         const totalWidth = temp1Meta.width + temp2Meta.width;
@@ -148,20 +176,19 @@ async function govVerify(item, delayTime, fileName, certificateName) {
             .toBuffer();
 
         const finalFileName = `${item.registerationNumber}_${fileName}.png`;
-        // institution과 certificateName이 같으면(예: 건강보험자격득실확인서) 중간 폴더 중복 제거
         const middleFolder = certificateName && certificateName !== fileName ? `${certificateName}/` : "";
         item.zipPath = `${fileName}/${middleFolder}${finalFileName}`;
         item.imageBase64 = imageBuffer.toString("base64");
         item.result = 1;
+        item.branch = branch;
 
-        // temp 삭제
         fs.unlinkSync(temp1Path);
         fs.unlinkSync(temp2Path);
         console.log("📂 temp 이미지 삭제 완료");
     } catch (error) {
         console.error(`${item.name} 처리 중 오류 발생:`, error);
         item.result = 0;
-        item.error = "처리중 오류";
+        item.error = item.error || "처리중 오류";
         item.zipPath = null;
         item.imageBase64 = null;
     } finally {
@@ -173,4 +200,4 @@ async function govVerify(item, delayTime, fileName, certificateName) {
     }
 }
 
-module.exports = { govVerify };
+module.exports = { govDisabilityVerify };

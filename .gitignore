@@ -1,9 +1,7 @@
-/node_modules
-.env
-# ✅ 압축 파일 무시
-*.zip
+# 모든 파일/폴더 무시
+/*
 
-# ✅ 엑셀 파일 무시
-*.xlsx
-*.xls
-
+# 단, client, server, .gitignore 는 추적
+!/client
+!/server
+!/.gitignore

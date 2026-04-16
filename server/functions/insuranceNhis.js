@@ -35,7 +35,7 @@ async function insuranceNhis(item, delayTime) {
         console.log("✅ 자격득실확인서 체크 완료");
 
         // (4) 발급번호 입력
-        const passNum = item.passNum.trim();
+        const passNum = String(item.passNum ?? "").trim();
         const passNumInputSelector = "#docRefCopy";
         await page.waitForSelector(passNumInputSelector, { visible: true });
         await page.type(passNumInputSelector, passNum);
