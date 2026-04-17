@@ -62,6 +62,8 @@ exports.handleVerification = async (item, options = {}) => {
     }
   } else if (cleanedInstitution.includes("장애인")) {
     await govDisabilityVerify(item, delayTime + 2000, "장애인증명서", certificateName);
+  } else if (cleanedInstitution.includes("취업지원")) {
+    await govVerify(item, delayTime + 2000, "취업지원대상자증명서", certificateName);
   } else if (cleanedInstitution === "한국데이터산업진흥원" || cleanedInstitution === "한국데이터산업진흥원장") {
     await dataqVerify(item, delayTime, "한국데이터산업진흥원");
   } else if (cleanedInstitution === "국민연금가입자증명") {

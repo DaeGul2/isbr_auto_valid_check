@@ -120,8 +120,9 @@ const ExcelUploader = () => {
       const instRaw = row[institutionIdx] || "";
       const inst = normInst(instRaw);
 
-      // ✅ 유효 기관인지
-      if (institutionIdx !== -1 && !normalizedValid.includes(inst)) {
+      // ✅ 유효 기관인지 (소프트 매칭: "취업지원", "장애인" 포함 시 허용)
+      const softMatch = inst.includes("취업지원") || inst.includes("장애인");
+      if (institutionIdx !== -1 && !normalizedValid.includes(inst) && !softMatch) {
         issues.push("지원 불가능한 institution 값입니다.");
       }
 
