@@ -10,6 +10,7 @@ const { govVerify } = require("../functions/gov");
 const { govDisabilityVerify } = require("../functions/govDisability");
 const { npsVerify } = require("../functions/npsVerify");
 const { dataqVerify } = require("../functions/dataq");
+const { insurance4InsureVerify } = require("../functions/insurance4Insure");
 
 const delayTime = 3000;
 
@@ -71,6 +72,17 @@ exports.handleVerification = async (item, options = {}) => {
       await govVerify(item, delayTime + 2000, rawInstitution);
     } else {
       await npsVerify(item, delayTime);
+    }
+  } else if (cleanedInstitution.startsWith("4대") || rawInstitution.startsWith("4대")) {
+    // 4대 사회보험 가입자 가입내역 확인서
+    // 정부24 발급(문서확인번호 4-4-4(5)-4(5)) → govVerify
+    // 4insure 발급(14자리 발급번호) → insurance4InsureVerify
+    const trimmedPassNum = s(passNum);
+    const isGov24Pattern = /^\d{4,5}-\d{4,5}-\d{4,5}-\d{4,5}$/.test(trimmedPassNum);
+    if (isGov24Pattern) {
+      await govVerify(item, delayTime + 2000, rawInstitution, certificateName);
+    } else {
+      await insurance4InsureVerify(item, delayTime);
     }
   } else {
     throw new Error(`알 수 없는 기관: ${rawInstitution}`);

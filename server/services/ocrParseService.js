@@ -242,6 +242,33 @@ function classifyAndParse(fname, text) {
     results.push(r);
   }
 
+  // ㅎ. 4대 사회보험 가입자 가입내역 확인서
+  // 정부24 ver: 문서확인번호({4}-{4}-{4(5)}-{4(5)}) -> passNum
+  // 4insure ver: 14자리 발급번호 -> passNum, birth(주민번호 앞자리), 성명 별도
+  if (
+    (fnLower.includes('4대') || fnLower.includes('사대')) ||
+    textNoSpace.includes('4대사회보험') ||
+    textNoSpace.includes('가입자가입내역확인')
+  ) {
+    const isGov24Marker = textNoSpace.includes('정부24') || textLower.includes('gov.kr');
+    const r = { institution: '4대 사회보험 가입자 가입내역 확인서', type: '4대사회보험' };
+    const docNum = parseDocRefNum(text);
+    // 4insure 발급번호: 14자리 숫자 (하이픈 없음)
+    const m14 = text.match(/발\s*급\s*번\s*호[\s:：]*(\d{14})/) || text.replace(/\s/g, '').match(/발급번호(\d{14})/);
+    if (isGov24Marker && docNum) {
+      r.passNum = docNum;
+      r._note = '정부24';
+    } else if (m14) {
+      r.passNum = m14[1];
+      r._note = '4insure';
+    } else if (docNum) {
+      r.passNum = docNum;
+      r._note = '정부24(추정)';
+    }
+    r.birth = parseBirthFromJumin(text);
+    results.push(r);
+  }
+
   // ㅌ. 취업지원대상
   if ((fnLower.includes('취업') && fnLower.includes('지원')) || textNoSpace.includes('취업지원')) {
     const r = { institution: '취업지원대상자증명서', type: '취업지원' };

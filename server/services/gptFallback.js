@@ -69,6 +69,15 @@ const FIELD_RULES = {
     extraNum:
       "Registration number. 6자리 숫자.",
   },
+  '4대 사회보험 가입자 가입내역 확인서': {
+    passNum:
+      "정부24 ver: 문서확인번호 {4}-{4}-{4 또는 5}-{4 또는 5} (하이픈 포함 반환). " +
+      "4insure ver: '발 급 번 호' 옆 14자리 숫자(하이픈 없음, 예: '20260513898035'). " +
+      "어느 ver이든 존재하는 식별 번호 하나를 그대로 반환. 둘 다 있으면 정부24 우선.",
+    birth:
+      "주민(외국인)등록번호 앞 6자리(yymmdd). '주민(외국인)등록번호 yymmdd-...' 형태에서 앞 6자리. " +
+      "정부24 ver에는 마스킹된 형태로 보이므로 4insure ver의 본문에서만 명시적으로 나옴. 결과는 yymmdd 6자리 숫자.",
+  },
   취업지원대상자증명서: {
     passNum:
       "문서확인번호 {4}-{4}-{4}-{4 또는 5}. 하이픈 포함 반환.",
@@ -155,6 +164,10 @@ function getRequiredFields(institution, note) {
   // 국민연금: 정부24면 extraNum/issuedDate 필요 없음
   if (institution === '국민연금가입자증명' && note && note.includes('정부24')) {
     fields = fields.filter((f) => f !== 'extraNum' && f !== 'issuedDate');
+  }
+  // 4대 사회보험: 정부24 ver이면 birth 필요 없음(마스킹), 4insure ver이면 birth 필요
+  if (institution === '4대 사회보험 가입자 가입내역 확인서' && note && note.includes('정부24')) {
+    fields = fields.filter((f) => f !== 'birth');
   }
   return fields;
 }

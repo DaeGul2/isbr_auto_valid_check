@@ -52,6 +52,7 @@ const validInstitutions = [
   "국민연금가입자증명",
   "한국데이터산업진흥원",
   "장애인증명서",
+  "4대 사회보험 가입자 가입내역 확인서",
 ];
 const normalizedValid = validInstitutions.map((inst) =>
   inst.replace(/\s/g, "").toLowerCase()
@@ -125,6 +126,11 @@ const ExcelUploader = () => {
       if (institutionIdx !== -1 && !normalizedValid.includes(inst) && !softMatch) {
         issues.push("지원 불가능한 institution 값입니다.");
       }
+      // ✅ 4대 사회보험 가입자 가입내역 확인서 — institution이 '4대'로 시작하면 허용
+      if (inst.startsWith("4대") || String(instRaw).trim().startsWith("4대")) {
+        const i = issues.indexOf("지원 불가능한 institution 값입니다.");
+        if (i !== -1) issues.splice(i, 1);
+      }
 
       // ✅ 한국생산성본부는 birth 필수 유지
       const isKpc = inst === normInst("한국생산성본부");
@@ -146,6 +152,21 @@ const ExcelUploader = () => {
           issues.push("birth 컬럼이 필요합니다. (장애인증명서)");
         } else if (!row[birthIdx]) {
           issues.push("birth 값이 필요합니다. (장애인증명서)");
+        }
+      }
+
+      // ✅ 4대 사회보험 가입자 가입내역 확인서 규칙
+      // 정부24 발급(passNum이 4그룹 하이픈 형식)이면 birth 불필요
+      // 4insure 발급(14자리 숫자)이면 birth(yymmdd) 필요
+      if (inst.startsWith("4대") || String(instRaw).trim().startsWith("4대")) {
+        const passNum = row[passNumIdx] || "";
+        const isGov24Pattern = /^\d{4,5}-\d{4,5}-\d{4,5}-\d{4,5}$/.test(String(passNum).trim());
+        if (!isGov24Pattern) {
+          if (birthIdx === -1) {
+            issues.push("birth 컬럼이 필요합니다. (4대 사회보험 - 4insure 발급)");
+          } else if (!row[birthIdx]) {
+            issues.push("birth 값(주민번호 앞자리 yymmdd)이 필요합니다. (4대 사회보험 - 4insure 발급)");
+          }
         }
       }
 
