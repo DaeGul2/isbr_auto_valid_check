@@ -52,6 +52,8 @@ const validInstitutions = [
   "국민연금가입자증명",
   "한국데이터산업진흥원",
   "장애인증명서",
+  "취업지원대상자증명서",
+  "수급자증명서",
   "4대 사회보험 가입자 가입내역 확인서",
 ];
 const normalizedValid = validInstitutions.map((inst) =>
@@ -152,6 +154,15 @@ const ExcelUploader = () => {
           issues.push("birth 컬럼이 필요합니다. (장애인증명서)");
         } else if (!row[birthIdx]) {
           issues.push("birth 값이 필요합니다. (장애인증명서)");
+        }
+      }
+
+      // ✅ 수급자증명서(국민기초생활수급자) 규칙
+      // 정부24 2차 입력이 성명/발급번호로 랜덤 → 장애인증명서처럼 발급번호(extraNum) 필요
+      if (inst.includes("수급")) {
+        const extraNum = row[loweredHeaders.indexOf("extranum")] || "";
+        if (!extraNum) {
+          issues.push("extraNum(발급번호) 값이 필요합니다. (수급자증명서 — 2차 발급번호 요청 대비)");
         }
       }
 

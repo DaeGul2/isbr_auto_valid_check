@@ -278,6 +278,22 @@ function classifyAndParse(fname, text) {
     results.push(r);
   }
 
+  // ㅍ. 국민기초생활수급자 증명서 (수급자증명서, 정부24) — 문서확인번호 + 성명(input)
+  if (
+    fnLower.includes('수급') ||
+    (fnLower.includes('기초') && fnLower.includes('수급')) ||
+    textNoSpace.includes('수급자증명서') ||
+    textNoSpace.includes('국민기초생활')
+  ) {
+    const r = { institution: '수급자증명서', type: '기초생활수급' };
+    r.passNum = parseDocRefNum(text);
+    // 정부24 2차 입력이 성명/발급번호로 랜덤 → 발급번호(extraNum), 생년월일(birth)도 추출
+    r.extraNum = parseDisabilityIssueNum(text);
+    r.birth = parseBirthDateSmart(text);
+    r._note = '정부24';
+    results.push(r);
+  }
+
   return results;
 }
 

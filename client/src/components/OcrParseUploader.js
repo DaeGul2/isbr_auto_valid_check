@@ -37,6 +37,7 @@ const FIELDS_BY_INST = {
   토익: ["passNum", "extraNum", "birth"],
   토플: ["passNum", "extraNum", "birth"],
   취업지원대상자증명서: ["passNum", "extraNum", "birth"],
+  수급자증명서: ["passNum", "extraNum", "birth"],
 };
 
 const FIELD_LABELS = {
@@ -63,6 +64,7 @@ const INST_COLORS = {
   토익: "#0288d1",
   토플: "#00838f",
   취업지원대상자증명서: "#6a1b9a",
+  수급자증명서: "#00695c",
 };
 
 const FIELD_HIGHLIGHT_COLORS = {
