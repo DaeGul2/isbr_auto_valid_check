@@ -139,7 +139,7 @@ async function hanguksaVerifyWithBirth(item, delayTime, directoryName) {
       item.result = String(합격여부 || "").trim() === "합격" ? 1 : 0;
       item.subs = 등급 ? `한국사능력검정시험${등급}` : "";
 
-      const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
+      const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
       item.zipPath = `자격증/${directoryName}/${fileName}`;
       item.imageBase64 = await page.screenshot({ encoding: "base64" });
     } else {
@@ -236,7 +236,7 @@ async function hanguksaVerifyNoBirth(item, delayTime, directoryName) {
     item.date = "";
     item.subs = "";
 
-    const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
+    const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
     item.zipPath = `자격증/${directoryName}/${fileName}`;
     item.imageBase64 = await page.screenshot({ encoding: "base64", fullPage: true });
 

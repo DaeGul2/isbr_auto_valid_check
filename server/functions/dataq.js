@@ -164,7 +164,7 @@ async function dataqVerify(item, delayTime, directoryName) {
       item.subs = resultData["종목"] || "";
       item.date = resultData["합격일자"] || "";
 
-      const fileName = `${item.registerationNumber}_${item.certificateName}.png`;
+      const fileName = `${item.registerationNumber}_${item.name}_${item.certificateName}.png`;
       item.zipPath = `자격증/${directoryName}/${fileName}`;
       item.imageBase64 = await popup.screenshot({ encoding: "base64" });
 

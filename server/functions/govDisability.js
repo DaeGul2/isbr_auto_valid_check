@@ -175,7 +175,9 @@ async function govDisabilityVerify(item, delayTime, fileName, certificateName) {
             .png()
             .toBuffer();
 
-        const finalFileName = `${item.registerationNumber}_${fileName}.png`;
+        // 파일명 통일 규칙: 수험번호_이름_자격증명 (자격증명 없으면 기관명 fallback)
+        const certLabel = certificateName && String(certificateName).trim() ? String(certificateName).trim() : fileName;
+        const finalFileName = `${item.registerationNumber}_${item.name}_${certLabel}.png`;
         const middleFolder = certificateName && certificateName !== fileName ? `${certificateName}/` : "";
         item.zipPath = `${fileName}/${middleFolder}${finalFileName}`;
         item.imageBase64 = imageBuffer.toString("base64");

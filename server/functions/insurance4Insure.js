@@ -64,7 +64,7 @@ async function insurance4InsureVerify(item, delayTime) {
 
         if (pageText.includes("발급된 사실이 있습니다")) {
             const certName = String(item.certificateName ?? "").trim() || "4대 사회보험 가입자 가입내역 확인서";
-            const fileName = `${item.registerationNumber}_${certName}.png`;
+            const fileName = `${item.registerationNumber}_${item.name}_${certName}.png`;
             item.zipPath = `4대 사회보험 가입자 가입내역 확인서/${fileName}`;
             const buffer = await page.screenshot({ encoding: "base64", fullPage: true });
             item.imageBase64 = buffer;
